@@ -1,4 +1,33 @@
 var svgMorph = {};
+svgMorph.Rectangle = function(x, y, width, height) {
+	this.x1 = x;
+	this.y1 = y;
+	this.w = width;
+	this.h = height;
+
+	this.width = function() {
+		return this.w;
+	}
+
+	this.height = function() {
+		return this.h;
+	}
+
+	this.scale = function(scale) {
+		this.w = this.w * scale;
+		this.h = this.h * scale;
+	}
+
+	this.translate = function(x, y) {
+		this.x1 += x;
+		this.y1 += y;
+	}
+
+	this.clone = function() {
+		return new svgMorph.Rectangle(this.x1, this.y1, this.w, this.h);
+	}
+}
+
 svgMorph.Point = function(x, y) {
 	this.x = x || 0;
 	this.y = y || 0;
@@ -8,7 +37,9 @@ svgMorph.Point = function(x, y) {
 	}
 
 	this.clone = function() {
-		return new svgMorph.Point(this.x, this.y);
+		var x = this.x;
+		var y = this.y;
+		return new svgMorph.Point(x, y);
 	}
 
 	this.equals = function(pt) {
@@ -33,6 +64,12 @@ svgMorph.Point = function(x, y) {
 		var newY = this.y + (pt2.y - this.y) * percentage;
 		return new svgMorph.Point(newX, newY);
 	}
+	this.translate = function(tX, tY) {
+		var pX = this.x + tX;
+		var pY = this.y + tY;
+		this.x = pX;
+		this.y = pY;
+	}
 }
 svgMorph.RandomPoint = function(width, height) {
 	var newX = Math.random() * width;
@@ -42,7 +79,7 @@ svgMorph.RandomPoint = function(width, height) {
 svgMorph.Vector = function(x, y) {
 	this.x = x || 0;
 	this.y = y || 0;
-	
+
 	this.Interpolate = function(percentage) {
 		return new svgMorph.Vector(this.x * percentage, this.y * percentage);
 	}
@@ -50,11 +87,15 @@ svgMorph.Vector = function(x, y) {
 svgMorph.LoadSVG = function(paths, callback) {
 	var svgPaths = [];
 	function loaded(data) {
+		var bb = svgMorph.getBoundingBox(data);
 		for (var i = 0; i < data.length; i++) {
 			var pathData = svgMorph.getPathStrings(data[i]);
-			console.dir(pathData);
+			//trace("--> path strings : " + i + " : length " + pathData.length);
+			//console.dir(pathData);
 			for (var p = 0; p < pathData.length; p++) {
 				var path = new Path(pathData[p]);
+				path.setRectangle(bb.clone());
+				//trace("push path : --> " + path);
 				svgPaths.push(path);
 			}
 		}
@@ -64,39 +105,75 @@ svgMorph.LoadSVG = function(paths, callback) {
 
 	Poller.loadData(paths, loaded);
 }
+svgMorph.getBoundingBox = function(xml) {
+	var attributes = $(xml).find('svg')[0].attributes;
+	var x = svgMorph.getNodeValue(attributes, "x");
+	var y = svgMorph.getNodeValue(attributes, "y");
+	var width = svgMorph.getNodeValue(attributes, "width");
+	var height = svgMorph.getNodeValue(attributes, "height");
+	//trace("PAth BB : x:" + x + " y:" + y + " width:" + width + " height:" + height);
+
+	return new svgMorph.Rectangle(x, y, width, height);
+}
+
+svgMorph.getNodeValue = function(attributes, name) {
+	return parseInt(attributes[name].nodeValue);
+}
 svgMorph.getPathStrings = function(xml) {
-	//			console.dir(xml.childNodes[2].childNodes[1].attributes[3].nodeValue);
-	//return xml.childNodes[2].childNodes[1].attributes[3].nodeValue;
+
 	var arr = new Array();
-	$(xml).find('path').each(function(data) {
+	var paths = $(xml).find('path');
+
+	if (paths.length == 0) {
+		trace("SVGMorphError : no paths found in svg!");
+		return [];
+	}
+
+	$(paths).each(function(data) {
+		var name = $(this).attr('name') || this.baseURI || "";
 		var d = $(this).attr('d');
 		//trace("d : " + d);
-		arr.push(d);
+
+		arr.push({
+			name : name,
+			d : d
+		});
 	});
+
 	return arr;
 }
-svgMorph.Segment = function(pt1, ctrl1, pt2, ctrl2, color) {
-	var _pt1, _pt2, _ctrl1, _ctrl2;
-	this.pt1 = pt1 !== null ? pt1.clone() : new svgMorph.Point();
-	this.ctrl1 = ctrl1 || this.pt1.clone();
-	this.pt2 = pt2 !== null ? pt1.clone() : new svgMorph.Point();
+
+svgMorph.Segment = function(p1, ctrl1, p2, ctrl2, color) {
+	this.pt1 = p1 !== null ? p1.clone() : new svgMorph.Point();
+	this.pt2 = p2 !== null ? p2.clone() : new svgMorph.Point();
 	this.ctrl2 = ctrl2 || this.pt2.clone();
+	this.ctrl1 = ctrl1 || this.pt1.clone();
 
 	this.color = color || 0;
 
-	//trace("Segment : p1 :" + this.pt1.trace() + " ctrl1 :" + this.ctrl1.trace() + " ctrl2 " + this.ctrl2.trace() + " p2 :" + this.pt2.trace());
+	this.interpolate = function() {
+	}
+	
 	this.draw = function(p) {
 		p.bezier(this.pt1.x, this.pt1.y, this.ctrl1.x, this.ctrl1.y, this.ctrl2.x, this.ctrl2.y, this.pt2.x, this.pt2.y);
+	}
+
+	this.translate = function(x, y) {
+		//trace("translate : " + x + " : " + y);
+		this.pt1.translate(x, y);
+		this.pt2.translate(x, y);
+		this.ctrl1.translate(x, y);
+		this.ctrl2.translate(x, y);
 	}
 
 	this.scale = function(scale, regPt) {
 
 		var regPt = regPt || new svgMorph.Point(0, 0);
 		//TODO : scale by registration point
-		
-		var ctrlV1 = new svgMorph.Vector((ctrl1.x - this.pt1.x) * scale, (ctrl1.y - this.pt1.y) * scale);
-		var ctrlV2 = new svgMorph.Point((ctrl2.x - this.pt2.x) * scale, (ctrl2.y - this.pt2.y) * scale);
-		
+
+		var ctrlV1 = new svgMorph.Vector((this.ctrl1.x - this.pt1.x) * scale, (this.ctrl1.y - this.pt1.y) * scale);
+		var ctrlV2 = new svgMorph.Point((this.ctrl2.x - this.pt2.x) * scale, (this.ctrl2.y - this.pt2.y) * scale);
+
 		this.pt1.x *= scale;
 		this.pt1.y *= scale;
 		this.pt2.x *= scale;
@@ -106,9 +183,13 @@ svgMorph.Segment = function(pt1, ctrl1, pt2, ctrl2, color) {
 		this.ctrl2 = new svgMorph.Point(this.pt2.x + ctrlV2.x, this.pt2.y + ctrlV2.y);
 
 	}
-	
-	this.isCurve = function(){
+
+	this.isCurve = function() {
 		return !pt1.equals(ctrl1) && !pt2.equals(ctrl2);
+	}
+
+	this.clone = function() {
+		return new svgMorph.Segment(this.pt1.clone(), this.ctrl1.clone(), this.pt2.clone(), this.ctrl2.clone());
 	}
 }
 svgMorph.MorphSegment = function(origSeg, destSeg) {
@@ -129,10 +210,135 @@ svgMorph.MorphSegment = function(origSeg, destSeg) {
 		return seg;
 	}
 }
+var BoundingBox = function(x1, y1, x2, y2) {// pass in initial points if you want
+	this.x1 = Number.NaN;
+	this.y1 = Number.NaN;
+	this.x2 = Number.NaN;
+	this.y2 = Number.NaN;
+
+	this.scale = function(scale) {
+		this.x2 = this.x1 + this.width() * scale;
+		this.y2 = this.y1 + this.height() * scale;
+	}
+
+	this.x = function() {
+		return this.x1;
+	}
+	this.y = function() {
+		return this.y1;
+	}
+	this.width = function() {
+		return this.x2 - this.x1;
+	}
+	this.height = function() {
+		return this.y2 - this.y1;
+	}
+
+	this.addPoint = function(x, y) {
+		if (x != null) {
+			if (isNaN(this.x1) || isNaN(this.x2)) {
+				this.x1 = x;
+				this.x2 = x;
+			}
+			if (x < this.x1)
+				this.x1 = x;
+			if (x > this.x2)
+				this.x2 = x;
+		}
+
+		if (y != null) {
+			if (isNaN(this.y1) || isNaN(this.y2)) {
+				this.y1 = y;
+				this.y2 = y;
+			}
+			if (y < this.y1)
+				this.y1 = y;
+			if (y > this.y2)
+				this.y2 = y;
+		}
+	}
+	this.addX = function(x) {
+		this.addPoint(x, null);
+	}
+	this.addY = function(y) {
+		this.addPoint(null, y);
+	}
+
+	this.addBoundingBox = function(bb) {
+		this.addPoint(bb.x1, bb.y1);
+		this.addPoint(bb.x2, bb.y2);
+	}
+
+	this.addQuadraticCurve = function(p0x, p0y, p1x, p1y, p2x, p2y) {
+		var cp1x = p0x + 2 / 3 * (p1x - p0x);
+		// CP1 = QP0 + 2/3 *(QP1-QP0)
+		var cp1y = p0y + 2 / 3 * (p1y - p0y);
+		// CP1 = QP0 + 2/3 *(QP1-QP0)
+		var cp2x = cp1x + 1 / 3 * (p2x - p0x);
+		// CP2 = CP1 + 1/3 *(QP2-QP0)
+		var cp2y = cp1y + 1 / 3 * (p2y - p0y);
+		// CP2 = CP1 + 1/3 *(QP2-QP0)
+		this.addBezierCurve(p0x, p0y, cp1x, cp2x, cp1y, cp2y, p2x, p2y);
+	}
+
+	this.addBezierCurve = function(p0x, p0y, p1x, p1y, p2x, p2y, p3x, p3y) {
+		// from http://blog.hackers-cafe.net/2009/06/how-to-calculate-bezier-curves-bounding.html
+		var p0 = [p0x, p0y], p1 = [p1x, p1y], p2 = [p2x, p2y], p3 = [p3x, p3y];
+		this.addPoint(p0[0], p0[1]);
+		this.addPoint(p3[0], p3[1]);
+
+		for ( i = 0; i <= 1; i++) {
+			var f = function(t) {
+				return Math.pow(1 - t, 3) * p0[i] + 3 * Math.pow(1 - t, 2) * t * p1[i] + 3 * (1 - t) * Math.pow(t, 2) * p2[i] + Math.pow(t, 3) * p3[i];
+			}
+			var b = 6 * p0[i] - 12 * p1[i] + 6 * p2[i];
+			var a = -3 * p0[i] + 9 * p1[i] - 9 * p2[i] + 3 * p3[i];
+			var c = 3 * p1[i] - 3 * p0[i];
+
+			if (a == 0) {
+				if (b == 0)
+					continue;
+				var t = -c / b;
+				if (0 < t && t < 1) {
+					if (i == 0)
+						this.addX(f(t));
+					if (i == 1)
+						this.addY(f(t));
+				}
+				continue;
+			}
+
+			var b2ac = Math.pow(b, 2) - 4 * c * a;
+			if (b2ac < 0)
+				continue;
+			var t1 = (-b + Math.sqrt(b2ac)) / (2 * a);
+			if (0 < t1 && t1 < 1) {
+				if (i == 0)
+					this.addX(f(t1));
+				if (i == 1)
+					this.addY(f(t1));
+			}
+			var t2 = (-b - Math.sqrt(b2ac)) / (2 * a);
+			if (0 < t2 && t2 < 1) {
+				if (i == 0)
+					this.addX(f(t2));
+				if (i == 1)
+					this.addY(f(t2));
+			}
+		}
+	}
+
+	this.isPointInBox = function(x, y) {
+		return (this.x1 <= x && x <= this.x2 && this.y1 <= y && y <= this.y2);
+	}
+
+	this.addPoint(x1, y1);
+	this.addPoint(x2, y2);
+}
 var PathParser = function(d) {
 	//console.log("d ===! : " + d);
-	var d = d || "";
-	this.tokens = d.split(' ');
+	var _d = d || "";
+	this.tokens = _d.split(' ');
 	//console.dir(this.tokens);
 
 	this.reset = function() {
@@ -253,24 +459,69 @@ var PathParser = function(d) {
 		return this.angles;
 	}
 }
-var Path = function(d) {
+var Path = function(obj) {
 	var i;
+	//trace("new path!: " + d);
+	this.name = obj.name || "";
 
+	var _d = obj.d;
 	var _segs = [];
 	var _points = [];
+	var _rect;
 	var _currentSegment;
+	var bb = new BoundingBox();
 
+	this.clone = function() {
+		var p = new Path({d:_d});
+		p.setRectangle(_rect.clone());
+		p.name = this.name;
+		return p;
+	}
+
+	this.translate = function(x, y) {
+		for (var i = 0; i < _segs.length; i++) {
+			var seg = _segs[i];
+			seg.translate(x, y);
+		}
+		_rect.translate(x, y);
+	}
 	this.setScale = function(scale) {
+		//trace("set scale : " + scale);
 		for (var i = 0; i < _segs.length; i++) {
 			var seg = _segs[i];
 			seg.scale(scale, new Point(0, 0));
 		}
+		_rect.scale(scale);
 	}
+	this.setRectangle = function(rect) {
+		_rect = rect;
+	}
+
+	this.width = function() {
+		return _rect.width();
+	}
+
+	this.height = function() {
+		return _rect.height();
+	}
+
+	this.setSegments = function(segs) {
+		segments = [];
+		for (var i = 0; i < segs.length; i++) {
+			segments = segs[i].clone();
+		}
+	}
+
 	this.getSegments = function() {
-		return _segs;
+		//trace("return :" + _segs.length);
+		var segments = [];
+		for (var i = 0; i < _segs.length; i++) {
+			segments.push(_segs[i].clone());
+		}
+		return segments;
 	}
 	var getLastPoint = function() {
-		return _points[_points.length - 1];
+		return _points[_points.length - 1].clone();
 	}
 	var isFirstPoint = function() {
 		return _points.length == 0;
@@ -307,37 +558,34 @@ var Path = function(d) {
 	}
 	var addLineSegment = function(p1, p2) {
 		_segs.push(new svgMorph.Segment(p1, p1, p2, p2));
-		//trace("add seg :" + p1.x + "/" + p1.y + " : " + p2.x + "/" + p2.y + "/" + _segs.length);
+		//trace("add line :" + p1.x + "/" + p1.y + " : " + p2.x + "/" + p2.y + "/" + _segs.length);
 	}
 	var addSegment = function(p1, c1, p2, c2) {
 		_segs.push(new svgMorph.Segment(p1, c1, p2, c2));
 		//trace("add seg :" + p1.x + "/" + p1.y + " : " + p2.x + "/" + p2.y + "/" + _segs.length);
 	}
-	d = d.replace(/,/gm, ' ');
+	_d = _d.replace(/,/gm, ' ');
 	// get rid of all commas
-	d = d.replace(/([MmZzLlHhVvCcSsQqTtAa])([MmZzLlHhVvCcSsQqTtAa])/gm, '$1 $2');
+	_d = _d.replace(/([MmZzLlHhVvCcSsQqTtAa])([MmZzLlHhVvCcSsQqTtAa])/gm, '$1 $2');
 	// separate commands from commands
-	d = d.replace(/([MmZzLlHhVvCcSsQqTtAa])([MmZzLlHhVvCcSsQqTtAa])/gm, '$1 $2');
+	_d = _d.replace(/([MmZzLlHhVvCcSsQqTtAa])([MmZzLlHhVvCcSsQqTtAa])/gm, '$1 $2');
 	// separate commands from commands
-	d = d.replace(/([MmZzLlHhVvCcSsQqTtAa])([^\s])/gm, '$1 $2');
+	_d = _d.replace(/([MmZzLlHhVvCcSsQqTtAa])([^\s])/gm, '$1 $2');
 	// separate commands from points
-	d = d.replace(/([^\s])([MmZzLlHhVvCcSsQqTtAa])/gm, '$1 $2');
+	_d = _d.replace(/([^\s])([MmZzLlHhVvCcSsQqTtAa])/gm, '$1 $2');
 	// separate commands from points
-	d = d.replace(/([0-9])([+\-])/gm, '$1 $2');
+	_d = _d.replace(/([0-9])([+\-])/gm, '$1 $2');
 	// separate digits when no comma
-	d = d.replace(/(\.[0-9]*)(\.)/gm, '$1 $2');
+	_d = _d.replace(/(\.[0-9]*)(\.)/gm, '$1 $2');
 	// separate digits when no comma
-	d = d.replace(/([Aa](\s+[0-9]+){3})\s+([01])\s*([01])/gm, '$1 $3 $4 ');
+	_d = _d.replace(/([Aa](\s+[0-9]+){3})\s+([01])\s*([01])/gm, '$1 $3 $4 ');
 	// shorthand elliptical arc path syntax
-	//d = svg.compressSpaces(d);
-	d = d.replace(/[\s\r\t\n]+/gm, ' ');
+	//_d = svg.compressSpaces(_d);
+	_d = _d.replace(/[\s\r\t\n]+/gm, ' ');
 	// compress multiple spaces
-	d = d.replace(/^\s+|\s+$/g, '');
-	;
-	//trace("\n\nd =-->");
-	//console.log(d);
-	//var bb = new svg.BoundingBox();
-	var pp = new PathParser(d);
+	_d = _d.replace(/^\s+|\s+$/g, '');
+
+	var pp = new PathParser(_d);
 	pp.reset();
 
 	while (!pp.isEnd()) {
@@ -348,7 +596,7 @@ var Path = function(d) {
 				var p = pp.getAsCurrentPoint();
 				pp.addMarker(p);
 				addPoint(p.x, p.y);
-				//bb.addPoint(p.x, p.y);
+				bb.addPoint(p.x, p.y);
 				/*if (ctx != null)
 				 ctx.moveTo(p.x, p.y);
 				 */
@@ -357,7 +605,7 @@ var Path = function(d) {
 					var p = pp.getAsCurrentPoint();
 					pp.addMarker(p, pp.start);
 					addPoint(p.x, p.y);
-					//bb.addPoint(p.x, p.y);
+					bb.addPoint(p.x, p.y);
 					/*if (ctx != null)
 					 ctx.lineTo(p.x, p.y);
 					 */
@@ -371,7 +619,7 @@ var Path = function(d) {
 					pp.addMarker(p, c);
 
 					addPoint(p.x, p.y);
-					//bb.addPoint(p.x, p.y);
+					bb.addPoint(p.x, p.y);
 					/*if (ctx != null)
 					 ctx.lineTo(p.x, p.y);*/
 				}
@@ -384,7 +632,7 @@ var Path = function(d) {
 					pp.current = newP;
 
 					addPoint(newP.x, newP.y);
-					//bb.addPoint(pp.current.x, pp.current.y);
+					bb.addPoint(pp.current.x, pp.current.y);
 					/*if (ctx != null)
 					 ctx.lineTo(pp.current.x, pp.current.y);*/
 				}
@@ -396,7 +644,7 @@ var Path = function(d) {
 					pp.addMarker(newP, pp.current);
 					pp.current = newP;
 					addPoint(newP.x, newP.y);
-					//bb.addPoint(pp.current.x, pp.current.y);
+					bb.addPoint(pp.current.x, pp.current.y);
 					/*if (ctx != null)
 					 ctx.lineTo(pp.current.x, pp.current.y);*/
 				}
@@ -411,11 +659,12 @@ var Path = function(d) {
 					pp.addMarker(cp, cntrl, p1);
 
 					addCurvePoint(new svgMorph.Point(p1.x, p1.y), new svgMorph.Point(cntrl.x, cntrl.y), new svgMorph.Point(cp.x, cp.y));
-					//bb.addBezierCurve(curr.x, curr.y, p1.x, p1.y, cntrl.x, cntrl.y, cp.x, cp.y);
+					bb.addBezierCurve(curr.x, curr.y, p1.x, p1.y, cntrl.x, cntrl.y, cp.x, cp.y);
 					/*if (ctx != null)
 					 ctx.bezierCurveTo(p1.x, p1.y, cntrl.x, cntrl.y, cp.x, cp.y);
 					 */
-				}
+				}
+
 				break;
 			case 'S':
 			case 's':
@@ -428,7 +677,7 @@ var Path = function(d) {
 
 					addCurvePoint(new svgMorph.Point(p1.x, p1.y), new svgMorph.Point(cntrl.x, cntrl.y), new svgMorph.Point(cp.x, cp.y));
 
-					//bb.addBezierCurve(curr.x, curr.y, p1.x, p1.y, cntrl.x, cntrl.y, cp.x, cp.y);
+					bb.addBezierCurve(curr.x, curr.y, p1.x, p1.y, cntrl.x, cntrl.y, cp.x, cp.y);
 					/*if (ctx != null)
 					 ctx.bezierCurveTo(p1.x, p1.y, cntrl.x, cntrl.y, cp.x, cp.y);
 					 */
@@ -443,7 +692,7 @@ var Path = function(d) {
 					pp.addMarker(cp, cntrl, cntrl);
 
 					addCurvePoint(new svgMorph.Point(p1.x, p1.y), new svgMorph.Point(cntrl.x, cntrl.y), new svgMorph.Point(cp.x, cp.y));
-					//bb.addQuadraticCurve(curr.x, curr.y, cntrl.x, cntrl.y, cp.x, cp.y);
+					bb.addQuadraticCurve(curr.x, curr.y, cntrl.x, cntrl.y, cp.x, cp.y);
 					/*if (ctx != null)
 					 ctx.quadraticCurveTo(cntrl.x, cntrl.y, cp.x, cp.y);
 					 */
@@ -459,7 +708,7 @@ var Path = function(d) {
 					pp.addMarker(cp, cntrl, cntrl);
 
 					addCurvePoint(new svgMorph.Point(p1.x, p1.y), new svgMorph.Point(cntrl.x, cntrl.y), new svgMorph.Point(cp.x, cp.y));
-					//bb.addQuadraticCurve(curr.x, curr.y, cntrl.x, cntrl.y, cp.x, cp.y);
+					bb.addQuadraticCurve(curr.x, curr.y, cntrl.x, cntrl.y, cp.x, cp.y);
 					/*if (ctx != null)
 					 ctx.quadraticCurveTo(cntrl.x, cntrl.y, cp.x, cp.y);
 					 */
@@ -529,7 +778,7 @@ var Path = function(d) {
 					addPoint(halfWay.x, halfWay.y)
 					addPoint(cp.x, cp.y);
 
-					//bb.addPoint(cp.x, cp.y);
+					bb.addPoint(cp.x, cp.y);
 					// TODO: this is too naive, make it better
 					if (ctx != null) {
 						var r = rx > ry ? rx : ry;
@@ -570,4 +819,10 @@ var Path = function(d) {
 		return markers;
 	}
 };
-
+svgMorph.clonePaths = function(paths) {
+	var newPaths = []
+	for (var i = 0; i < paths.length; i++) {
+		newPaths.push(paths[i]);
+	}
+	return newPaths;
+}
