@@ -4,7 +4,6 @@ var MORPH = (function() {
 
 		add : function(morph) {
 			_morphs.push(morph);
-			trace("============================================>>aDD MORPH " + _morphs.length);
 		},
 
 		update : function(time) {
@@ -26,39 +25,51 @@ var MORPH = (function() {
 			}
 			return true;
 		},
-
 		draw : function(p) {
 			var i = 0, numMorphs = _morphs.length;
 			while (i < numMorphs) {
 				var morph = _morphs[i++];
 				morph.draw(p)
 			}
+		},
+		clear : function(){
+			_morphs = [];
 		}
 	}
-
 })();
 
-MORPH.Morph = function(shapes, obj) {
-	var _shapes = shapes;
+MORPH.Morph = function(paths, obj) {
+	var _paths = paths;
 	var _currentIndex = 1, _count = 0;
-	var _numShapes = _shapes.length;
-	var _current;
+
+	var _current = 0;
 	var _shape = [];
-	var _morphSegmentGroups = [];
-	var _ratio;
+	var _morphablePathCollection = [];
+	var _ratio = 0;
 	var _startTime;
 	var _duration = obj["duration"] || 1000;
 	var _delayTime = 0;
 	var _looping = obj["looping"] || false;
-	var _completeCallback;
-	
+	var _numPaths = _looping ? _paths.length + 1 : _paths.length;
+	//var _numGroups = _numPaths - 1;
+	var _completeCallback = obj["onComplete"];
+	var _x = 0, _y = 0;
+
 	function init() {
+		reset();
+	}
+
+	function reset() {
 		var i = 0;
-		while (_morphSegmentGroups.length < _shapes.length) {
-			var morphSegmentGroup = MORPH.createMorphSegmentGroup(_shapes[i], _shapes[(i + 1) % _shapes.length]);
-			_morphSegmentGroups.push(morphSegmentGroup);
-			i++;
-		}
+		if (_numPaths > 1) {
+			_morphablePathCollection = [];
+			while (_morphablePathCollection.length < _numPaths - 1) {
+				var Morphables = MORPH.createMorphablePath(_paths[i].getSegments(), _paths[(i + 1) % _paths.length].getSegments());
+				_morphablePathCollection.push(Morphables);
+				i++;
+			}
+		} else
+			_morphablePathCollection.push(_paths[0]);
 	}
 
 
@@ -69,11 +80,18 @@ MORPH.Morph = function(shapes, obj) {
 	}
 
 	this.update = function(time) {
-		_ratio = (time - _startTime) / _duration;
+		var isComplete, index = 0;
 
-		var index = Math.floor(_ratio * _numShapes);
-		//trace(index + " : " + (_ratio * _numShapes));
-		if (index + 1 > _numShapes) {
+		_ratio = Math.max(0, Math.min(1, (time - _startTime) / _duration));
+
+		if (_numPaths > 1) {
+			var index = Math.floor(_ratio * (_numPaths - 1));
+			isComplete = index >= _numPaths - 1;
+		} else {
+			isComplete = _ratio >= 1;
+		}
+
+		if (isComplete) {
 
 			if (_completeCallback != null)
 				_completeCallback();
@@ -81,122 +99,177 @@ MORPH.Morph = function(shapes, obj) {
 			if (_looping) {
 				_startTime = Date.now();
 				_current = 0;
+				_ratio = 0;
 				return true;
-			} else
-				return false;
-		}
-		_current = index;
+			}
+			return false;
+		} else
+			_current = index;
 		return true;
 	}
 
-	this.getCurrentRatio = function() {
-		return (_ratio * _numShapes) - _current;
+	this.getCurrentPath = function() {
+		return _paths[_paths.length - 1];
 	}
-	this.getMorphSegmentGroup = function() {
-		return _morphSegmentGroups[_current];
+	
+	this.getCurrentRatio = function() {
+		var cR = (_ratio * (_numPaths - 1)) - _current;
+		return cR;
+	}
+	this.getCurrentMorphablePath = function() {
+		if (_current < _morphablePathCollection.length)
+			return _morphablePathCollection[_current];
+		else {
+			console.log("Error : something wrong here!");
+		}
 	}
 
 	this.getShape = function() {
-		var shape = [];
-		//try {
-		var currentMSG = this.getMorphSegmentGroup();
-		var r = this.getCurrentRatio();
-		//trace("-->" + r + " : " + _current);
-		for (var i = 0; i < currentMSG.length; i++) {
-
-			var morphSegmentGroup = currentMSG[i];
-
-			var segs = morphSegmentGroup.interpolate(r);
-			shape.push(segs);
-
+		if (_numPaths > 1)
+			return this.currentShape();
+		else {
+			var path = _paths[0];
+			return new MORPH.shape(path.getSegments());
 		}
-		// } catch(e) {
-		// trace(e);
-		// }
-		return shape;
 	}
 
-	this.draw = function(p) {
-		var shape = this.getShape();
-		for (var s = 0; s < shape.length; s++) {
-			var segs = shape[s];
-			for (var i = 0; i < segs.length; i++) {
-				segs[i].draw(p);
-			}
+	this.currentShape = function() {
+		var currentMorphablePathGroups = this.getCurrentMorphablePath().morphableGroups;
+
+		var ratio = this.getCurrentRatio();
+		var numGroups = currentMorphablePathGroups.length;
+		var numSegs = currentMorphablePathGroups.length;
+		var segs = [];
+
+		for (var i = 0; i < numSegs; i++) {
+			var morphableSegmentGroup = currentMorphablePathGroups[i];
+			var morphedSegs = morphableSegmentGroup.interpolate(ratio);
+			segs = segs.concat(morphedSegs);
 		}
+
+		return new MORPH.shape(segs);
 	}
 
 	this.onComplete = function(callback) {
-
 		_onCompleteCallback = callback;
 		return this;
-
 	};
 
+	this.setScale = function(scale) {
+		for (var i = 0; i < _paths.length; i++) {
+			_paths[i].setScale(scale);
+		}
+		reset();
+	}
+
+	this.getWidth = function() {
+		var w = 0;
+		for (var i = 0; i < _paths.length; i++) {
+			if (_paths[i].width() > w)
+				w = _paths[i].width();
+		}
+		return w;
+	}
+
+	this.getHeight = function() {
+		var h = 0;
+		for (var i = 0; i < _paths.length; i++) {
+			if (_paths[i].height() > h)
+				h = _paths[i].height();
+		}
+		return h;
+	}
+
+	this.setPos = function(x, y) {
+		var diffX = x - _x;
+		var diffY = y - _y;
+		_x = x;
+		_y = y;
+		var i = 0;
+		while (i < _paths.length) {
+			var path = _paths[i];
+			path.translate(x, y);
+			i++;
+		}
+	}
 	init();
-	
 	return this;
 }
 
-MORPH.createMorphSegmentGroup = function(seg1, seg2) {
-	var morphSegmentGroup = new Array();
-	var async = seg1.length != seg2.length;
-	var s1 = seg1.length;
-	var s2 = seg2.length;
+MORPH.createMorphablePath = function(segGroup1, segGroup2) {
+	var morphableGroups = new Array();
+	var async = segGroup1.length != segGroup2.length;
+	var s1 = segGroup1.length;
+	var s2 = segGroup2.length;
 	var async = s1 != s2;
 	var minCount = Math.min(s1, s2);
-	/*var maxArr = seg1.length >= seg2.length ? seg1.concat() : seg2.concat();
-	 var minArr = seg1.length >= seg2.length ? seg2.concat() : seg1.concat();
-
-	 var m1 = minArr.length;
-	 var m2 = maxArr.length;
-	 var diff = m1 / m2;
-	 */
 
 	var k1 = 0, k2 = 0;
 	for (var k = 0; k < minCount; k++) {
-		//var count = k2 * (minArr.length/maxArr.length);
 		var arr1 = [], arr2 = [];
 		if (s2 > s1) {
 			k1 = k;
-			arr1.push(seg1[k1]);
+			arr1.push(segGroup1[k1]);
 
 			while (k2 * (s1 / s2) < (k + 1) && k2 < s2) {
-				arr2.push(seg2[k2])
+				arr2.push(segGroup2[k2])
 				k2++;
 			}
 		} else {
 			k2 = k;
-			arr2.push(seg2[k2]);
+			arr2.push(segGroup2[k2]);
 			while (k1 * (s2 / s1) < (k + 1) && k1 < s1) {
-				arr1.push(seg1[k1]);
+				arr1.push(segGroup1[k1]);
 				k1++
 			}
 
 		}
-		morphSegmentGroup.push(new MORPH.MorphSegmentGroup(arr1, arr2));
+		morphableGroups.push(new MORPH.MorphableGroup(arr1, arr2));
 	}
-	return morphSegmentGroup;
+	return new MORPH.MorphablePath(morphableGroups);
 }
 
-MORPH.MorphSegmentGroup = function(origSegs, destSegs) {
+MORPH.MorphableGroup = function(origSegs, destSegs) {
 	var _origSegs = origSegs || [];
 	var _destSegs = destSegs || [];
-	this.heteromorphic = origSegs.length != destSegs.length;
+	var _heteromorphic = origSegs.length != destSegs.length;
 	var _maxLength = Math.max(_origSegs.length, _destSegs.length);
 	var _segs, _startSegs, _endSegs;
 	var _interSeg;
 
-	if (!this.heteromorphic) {
-		_segs = new Array();
-		for (var i = 0; i < _maxLength; i++) {
-			_segs.push(new svgMorph.MorphSegment(_origSegs[i], _destSegs[i]));
-		}
-	} else {
-		_interSeg = new svgMorph.Segment(_origSegs[0].pt1.Interpolate(_destSegs[0].pt1, 0.5), null, _origSegs[_origSegs.length - 1].pt2.Interpolate(_destSegs[_destSegs.length - 1].pt2, 0.5), null);
-		_segs = _startSegs = defineStartInterSegs();
-	};
+	function init() {
+		if (!_heteromorphic) {
+			_segs = new Array();
+			if (_destSegs) {
+				for (var i = 0; i < _maxLength; i++) {
+					_segs.push(new svgMorph.MorphSegment(_origSegs[i], _destSegs[i]));
+				}
+			} else
+				_segs = _origSegs;
 
+		} else {
+			_interSeg = new svgMorph.Segment(_origSegs[0].pt1.Interpolate(_destSegs[0].pt1, 0.5), null, _origSegs[_origSegs.length - 1].pt2.Interpolate(_destSegs[_destSegs.length - 1].pt2, 0.5), null);
+			_segs = _startSegs = defineStartInterSegs();
+		};
+	}
+
+
+	this.translate = function(x, y) {
+
+		setSegmentPos(_origSegs, x, y);
+
+		if (destSegs)
+			setSegmentPos(_destSegs, x, y);
+
+		function setSegmentPos(segArray, x, y) {
+			var i = 0;
+			for (var i = 0; i < segArray.length; i++) {
+				segArray[i].translate(x, y);
+			}
+		}
+
+		init();
+	}
 	function defineStartInterSegs() {
 		var interSegs = new Array();
 		var percentage, pt1, pt2;
@@ -228,7 +301,6 @@ MORPH.MorphSegmentGroup = function(origSegs, destSegs) {
 			interSegs.push(new svgMorph.MorphSegment(seg, _destSegs[i]));
 			i++;
 		}
-		///console.dir(interSegs);
 		return interSegs
 	}
 
@@ -236,13 +308,12 @@ MORPH.MorphSegmentGroup = function(origSegs, destSegs) {
 	this.interpolate = function(percentage) {
 		var segs = [];
 
-		if (this.heteromorphic)
+		if (_heteromorphic)
 			percentage = interpolateHetero(percentage);
 
 		for (var i = 0; i < _segs.length; i++) {
 			segs.push(_segs[i].interpolate(percentage));
 		}
-
 		return segs;
 	}
 	function interpolateHetero(percentage) {
@@ -257,5 +328,19 @@ MORPH.MorphSegmentGroup = function(origSegs, destSegs) {
 		return percentage < 0.5 ? percentage / 0.5 : (percentage - 0.5) / 0.5;
 	}
 
+	init();
 }
 
+MORPH.MorphablePath = function(morphableGroups) {
+	return {
+		morphableGroups : morphableGroups
+	};
+}
+
+MORPH.shape = function(segmentCollection) {
+	var _segmentCollection = segmentCollection || [];
+	return {
+		segmentCollection : _segmentCollection,
+		length : segmentCollection.length
+	};
+}
