@@ -1,66 +1,3 @@
-// Include a performance.now polyfill
-(function () {
-
-	if ('performance' in window === false) {
-		window.performance = {};
-	}
-
-	// IE 8
-	Date.now = (Date.now || function () {
-		return new Date().getTime();
-	});
-
-	if ('now' in window.performance === false) {
-		var offset = window.performance.timing && window.performance.timing.navigationStart ? window.performance.timing.navigationStart
-			: Date.now();
-
-		window.performance.now = function () {
-			return Date.now() - offset;
-		};
-	}
-
-})();
-
-var MORPH = (function () {
-	var _morphs = [];
-	return {
-
-		add: function (morph) {
-			_morphs.push(morph);
-		},
-
-		//todo check performance on time
-		update: function (time) {
-
-			if (_morphs.length === 0)
-				return false;
-
-			var i = 0, numMorphs = _morphs.length;
-
-			time = time !== undefined ? time : window.performance.now();
-
-			while (i < numMorphs) {
-				if (_morphs[i].update(time)) {
-					i++;
-				} else {
-					_morphs.splice(i, 1);
-					numMorphs--;
-				}
-			}
-			return true;
-		},
-		draw: function (p) {
-			var i = 0, numMorphs = _morphs.length;
-			while (i < numMorphs) {
-				var morph = _morphs[i++];
-				morph.draw(p)
-			}
-		},
-		clear: function () {
-			_morphs = [];
-		}
-	}
-})();
 
 /**
  * Morphable object
@@ -251,48 +188,51 @@ MORPH.createMorphablePath = function (segGroup1, segGroup2) {
 	}
 	return new MORPH.MorphablePath(morphableGroups);
 };
+
 MORPH.MorphableGroup = function (origSegs, destSegs) {
-	var _origSegs = origSegs || [];
-	var _destSegs = destSegs || [];
-	var _heteromorphic = origSegs.length != destSegs.length;
-	var _maxLength = Math.max(_origSegs.length, _destSegs.length);
-	var _segs, _startSegs, _endSegs;
-	var _interSeg;
+	this._origSegs = origSegs || [];
+	this._destSegs = destSegs || [];
+	this._heteromorphic = origSegs.length != destSegs.length;
+	this._maxLength = Math.max(this._origSegs.length,this._destSegs.length);
+	this._segs;
+	this._startSegs;
+	this._endSegs;
+	this._interSeg;
 
 	function init() {
-		if (!_heteromorphic) {
-			_segs = [];
-			if (_destSegs) {
-				for (var i = 0; i < _maxLength; i++) {
-					_segs.push(new MORPH.MorphSegment(_origSegs[i], _destSegs[i]));
+		if (!this._heteromorphic) {
+			this._segs = [];
+			if (this._destSegs) {
+				for (var i = 0; i < this._maxLength; i++) {
+					this._segs.push(new MORPH.MorphSegment(this._origSegs[i],this._destSegs[i]));
 				}
 			} else
-				_segs = _origSegs;
+				this._segs = this._origSegs;
 
 		} else {
 
-			if (destSegs.length > 1) {
-				_interSeg = new MORPH.Segment(_origSegs[0].pt1.Interpolate(_destSegs[0].pt1, 0.5), null, _origSegs[_origSegs.length - 1].pt2.Interpolate(_destSegs[_destSegs.length - 1].pt2, 0.5), null);
+			if (this._destSegs.length > 1) {
+				this._interSeg = new MORPH.Segment(this._origSegs[0].pt1.Interpolate(this._destSegs[0].pt1, 0.5), null, this._origSegs[this._origSegs.length - 1].pt2.Interpolate(this._destSegs[this._destSegs.length - 1].pt2, 0.5), null);
 			} else {
-				_interSeg = _destSegs[0].clone();
+				this._interSeg = _destSegs[0].clone();
 			}
 
-			_segs = _startSegs = defineStartInterSegs();
+			this._segs = this._startSegs = defineStartInterSegs();
 		}
 	}
 
 	function defineStartInterSegs() {
 		var interSegs = [];
 		var percentage, pt1, pt2;
-		pt2 = _interSeg.pt1;
+		pt2 = this._interSeg.pt1;
 		//create array of morph points
 		var i = 0;
 		while (i < _origSegs.length) {
 			percentage = (i + 1) / _origSegs.length;
 			pt1 = pt2.clone();
-			pt2 = _interSeg.pt1.Interpolate(_interSeg.pt2, percentage);
+			pt2 = this._interSeg.pt1.Interpolate(this._interSeg.pt2, percentage);
 			var seg = new MORPH.Segment(pt1, null, pt2, null);
-			interSegs.push(new MORPH.MorphSegment(_origSegs[i], seg));
+			interSegs.push(new MORPH.MorphSegment(this._origSegs[i], seg));
 			i++;
 		}
 		return interSegs
@@ -359,6 +299,9 @@ MORPH.MorphableGroup = function (origSegs, destSegs) {
 
 	init();
 };
+MORPH.MorphableGroupParallel = function(){
+
+}
 MORPH.MorphablePath = function (morphableGroups) {
 	return {
 		morphableGroups: morphableGroups
@@ -432,59 +375,8 @@ MORPH.MorphSegment = function (origSeg, destSeg) {
 		return new MORPH.Segment(pt1, ctrl1, pt2, ctrl2);
 	};
 };
-MORPH.CanvasUtils = {
-	CreateBuffer: function () {
-
-		var canvas = document.createElement("canvas");
-		var ctx = canvas.getContext("2d");
-
-		return {
-			canvas: canvas,
-			ctx: ctx,
-			width: -1,
-			height: -1,
-			invalidated: false,
-			resize: function (w, h) {
-				if (w && h) {
-					w = Math.floor(w);
-					h = Math.floor(h);
-
-					if (this.width !== w || this.height !== h) {
-						this.canvas.width = w;
-						this.canvas.height = h;
-						this.width = w;
-						this.height = h;
-						return true;
-					}
-				}
-				return false;
-			},
-			clear: function () {
-				this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-			},
-			//for debug!
-			fill: function (color) {
-				this.ctx.fillStyle = color;
-				this.ctx.fillRect(0, 0, this.width, this.height);
-			},
-			getPixelRatio: function () {
-				//http://www.html5rocks.com/en/tutorials/canvas/hidpi/
-				var devicePixelRatio = window.devicePixelRatio || 1;
-				var backingStoreRatio = this.ctx.webkitBackingStorePixelRatio ||
-					this.ctx.mozBackingStorePixelRatio ||
-					this.ctx.msBackingStorePixelRatio ||
-					this.ctx.oBackingStorePixelRatio ||
-					this.ctx.backingStorePixelRatio || 1;
-
-				var ratio = devicePixelRatio / backingStoreRatio;
-				return ratio;
-			}
-		}
-	}
-};
-
 MORPH.GEOM = {
-	Rectangle: function (x, y, width, height) {
+	Rectangle  :function (x,y,width,height) {
 		this.x1 = x;
 		this.y1 = y;
 		this.w = width;
@@ -503,27 +395,27 @@ MORPH.GEOM = {
 			this.h = this.h * scale;
 		};
 
-		this.translate = function (x, y) {
+		this.translate = function (x,y) {
 			this.x1 += x;
 			this.y1 += y;
 		};
 
 		this.clone = function () {
-			return new MORPH.GEOM.Rectangle(this.x1, this.y1, this.w, this.h);
+			return new MORPH.GEOM.Rectangle(this.x1,this.y1,this.w,this.h);
 		};
 	},
-	Point: function (x, y) {
+	Point      :function (x,y) {
 		this.x = x || 0;
 		this.y = y || 0;
 
 		this.draw = function (p) {
-			p.ellipse(this.x, this.y, 10, 10);
+			p.ellipse(this.x,this.y,10,10);
 		};
 
 		this.clone = function () {
 			var x = this.x;
 			var y = this.y;
-			return new MORPH.GEOM.Point(x, y);
+			return new MORPH.GEOM.Point(x,y);
 		};
 
 		this.equals = function (pt) {
@@ -540,32 +432,32 @@ MORPH.GEOM = {
 			this.y = yp;
 		};
 		this.angleTo = function (p) {
-			return Math.atan2(p.y - this.y, p.x - this.x);
+			return Math.atan2(p.y - this.y,p.x - this.x);
 		};
 
-		this.Interpolate = function (pt2, percentage) {
+		this.Interpolate = function (pt2,percentage) {
 			var newX = this.x + (pt2.x - this.x) * percentage;
 			var newY = this.y + (pt2.y - this.y) * percentage;
-			return new MORPH.GEOM.Point(newX, newY);
+			return new MORPH.GEOM.Point(newX,newY);
 		};
-		this.translate = function (tX, tY) {
+		this.translate = function (tX,tY) {
 			var pX = this.x + tX;
 			var pY = this.y + tY;
 			this.x = pX;
 			this.y = pY;
 		};
 	},
-	RandomPoint: function (width, height) {
+	RandomPoint:function (width,height) {
 		var newX = Math.random() * width;
 		var newY = Math.random() * height;
-		return new MORPH.GEOM.Point(newX, newY);
+		return new MORPH.GEOM.Point(newX,newY);
 	},
-	Vector: function (x, y) {
+	Vector     :function (x,y) {
 		this.x = x || 0;
 		this.y = y || 0;
 
 		this.Interpolate = function (percentage) {
-			return new MORPH.GEOM.Vector(this.x * percentage, this.y * percentage);
+			return new MORPH.GEOM.Vector(this.x * percentage,this.y * percentage);
 		};
 	}
 };
@@ -577,69 +469,86 @@ MORPH.GEOM = {
  * @param callback
  * @constructor
  */
-MORPH.LoadSVG = function (paths, callback) {
-	var svgPaths = [];
-	var documents = [];
+MORPH.LoadPaths = function (paths) {
 
-	function loaded(data) {
-		var bb = MORPH.SVG.getBoundingBox(data[0]);
-		for (var i = 0; i < data.length; i++) {
-			var svg = data[i].getElementsByTagName('svg')[0];
-			var id = svg.getAttribute("id");
-			var pathData = MORPH.SVG.getPathStrings(data[i]);
-			for (var p = 0; p < pathData.length; p++) {
-				var path = new MORPH.PATH.Path({
-					id : id + "_" + p,
-					d : pathData[p]
-				});
-				path.setRectangle(bb.clone());
-				svgPaths.push(path);
-			}
-		}
-		callback(svgPaths);
-	}
+	return MORPH.LoadSVG(paths)
+		.then(function (data) {
 
-	function loadHandler(data) {
-		documents.push(data);
-		if (paths.length) {
-			load(paths.shift());
-		} else {
-			loaded(documents);
-		}
-	}
+			return new Promise(function (resolve,reject) {
+				var svgPaths = [];
 
-	function load(path) {
-		var xhttp = new XMLHttpRequest();
-		xhttp.onreadystatechange = function () {
-			if (xhttp.readyState == 4 && xhttp.status == 200) {
-				loadHandler(xhttp.responseXML);
-			}
-		};
-		xhttp.open("GET", path, true);
-		xhttp.send();
-	}
+				var bb = MORPH.SVG.getBoundingBox(data[0]);
 
-	load(paths.shift());
+				for (var i = 0; i < data.length; i++) {
+					var svg = data[i].getElementsByTagName('svg')[0];
+					var id = svg.getAttribute("id");
+					var pathData = MORPH.SVG.getPathStrings(data[i]);
+					for (var p = 0; p < pathData.length; p++) {
+						var path = new MORPH.PATH.Path({
+							id:id + "_" + p,
+							d :pathData[p]
+						});
+						path.setRectangle(bb.clone());
+						svgPaths.push(path);
+					}
+				}
+				resolve(svgPaths);
+
+			});
+		});
 };
+
+MORPH.LoadSVG = function (paths) {
+
+	return new Promise(function (resolve,reject) {
+
+		var svgPaths = [];
+		var documents = [];
+
+		function loadHandler(data) {
+			documents.push(data);
+			if (paths.length) {
+				load(paths.shift());
+			} else {
+				resolve(documents);
+			}
+		}
+
+		function load(path) {
+			var xhttp = new XMLHttpRequest();
+			xhttp.onreadystatechange = function () {
+				if (xhttp.readyState == 4 && xhttp.status == 200) {
+					loadHandler(xhttp.responseXML);
+				}
+			};
+			xhttp.open("GET",path,true);
+			xhttp.send();
+		}
+
+		load(paths.shift());
+
+	});
+};
+
 MORPH.SVG = {
-	getBoundingBox: function (data) {
+	getBoundingBox:function (data) {
 		var svg = data.getElementsByTagName('svg')[0];
 		var attributes = svg.attributes;
-		var x = MORPH.SVG.getNodeValue(attributes, "x");
-		var y = MORPH.SVG.getNodeValue(attributes, "y");
-		var width = MORPH.SVG.getNodeValue(attributes, "width") || 100;
-		var height = MORPH.SVG.getNodeValue(attributes, "height") || 100;
+		var x = MORPH.SVG.getNodeValue(attributes,"x");
+		var y = MORPH.SVG.getNodeValue(attributes,"y");
+		var width = MORPH.SVG.getNodeValue(attributes,"width") || 100;
+		var height = MORPH.SVG.getNodeValue(attributes,"height") || 100;
 		//trace("PAth BB : x:" + x + " y:" + y + " width:" + width + " height:" + height);
-		return new MORPH.GEOM.Rectangle(x, y, width, height);
+		return new MORPH.GEOM.Rectangle(x,y,width,height);
 	},
-	getNodeValue: function (attributes, name) {
+	getNodeValue  :function (attributes,name) {
 		if (attributes[name]) {
 			return parseInt(attributes[name].nodeValue);
 		}
 		return null;
 	},
-	getPathStrings: function (svg) {
-		var i, arr = [];
+	getPathStrings:function (svg) {
+		var i,arr = [];
 
 		var paths = svg.getElementsByTagName('path');
 		for (i = 0; i < paths.length; i++) {
@@ -655,6 +564,30 @@ MORPH.SVG = {
 			arr.push("M" + x1 + " " + y1 + " L" + x2 + " " + y2);
 		}
 
+		var polylines = svg.getElementsByTagName('polyline');
+		for(i = 0 ;i < polylines.length; i ++){
+
+			var points = polylines[i].getAttribute("points");
+			points = points.replace(/\s\s+/g, ' ');
+			points = points.split(" ");
+
+			var pt = points.shift().split(",");
+			var x = parseFloat(pt[0]);
+			var y = parseFloat(pt[1]);
+			var path = "M" + x + " " + y + " ";
+
+			while(points.length){
+				pt = points.shift().split(",");
+				if(pt.length){
+					x = parseFloat(pt[0]);
+					y = parseFloat(pt[1]);
+					path += "L " + x + " " + y + " ";
+				}
+			}
+			path = path.substr(0, path.length - 2);
+			arr.push(path);
+		}
+
 		//todo convert all primitives to paths
 		//for other conversions see : https://github.com/JFXtras/jfxtras-labs/blob/2.2/src/main/java/jfxtras/labs/util/ShapeConverter.java
 
@@ -663,7 +596,7 @@ MORPH.SVG = {
 };
 
 MORPH.PATH = {
-	BoundingBox: function (x1, y1, x2, y2) {// pass in initial points if you want
+	BoundingBox:function (x1,y1,x2,y2) {// pass in initial points if you want
 		this.x1 = Number.NaN;
 		this.y1 = Number.NaN;
 		this.x2 = Number.NaN;
@@ -687,7 +620,7 @@ MORPH.PATH = {
 			return this.y2 - this.y1;
 		};
 
-		this.addPoint = function (x, y) {
+		this.addPoint = function (x,y) {
 			if (x != null) {
 				if (isNaN(this.x1) || isNaN(this.x2)) {
 					this.x1 = x;
@@ -711,17 +644,17 @@ MORPH.PATH = {
 			}
 		};
 		this.addX = function (x) {
-			this.addPoint(x, null);
+			this.addPoint(x,null);
 		};
 		this.addY = function (y) {
-			this.addPoint(null, y);
+			this.addPoint(null,y);
 		};
 
 		this.addBoundingBox = function (bb) {
-			this.addPoint(bb.x1, bb.y1);
-			this.addPoint(bb.x2, bb.y2);
+			this.addPoint(bb.x1,bb.y1);
+			this.addPoint(bb.x2,bb.y2);
 		};
-		this.addQuadraticCurve = function (p0x, p0y, p1x, p1y, p2x, p2y) {
+		this.addQuadraticCurve = function (p0x,p0y,p1x,p1y,p2x,p2y) {
 			var cp1x = p0x + 2 / 3 * (p1x - p0x);
 			// CP1 = QP0 + 2/3 *(QP1-QP0)
 			var cp1y = p0y + 2 / 3 * (p1y - p0y);
@@ -730,17 +663,17 @@ MORPH.PATH = {
 			// CP2 = CP1 + 1/3 *(QP2-QP0)
 			var cp2y = cp1y + 1 / 3 * (p2y - p0y);
 			// CP2 = CP1 + 1/3 *(QP2-QP0)
-			this.addBezierCurve(p0x, p0y, cp1x, cp2x, cp1y, cp2y, p2x, p2y);
+			this.addBezierCurve(p0x,p0y,cp1x,cp2x,cp1y,cp2y,p2x,p2y);
 		};
-		this.addBezierCurve = function (p0x, p0y, p1x, p1y, p2x, p2y, p3x, p3y) {
+		this.addBezierCurve = function (p0x,p0y,p1x,p1y,p2x,p2y,p3x,p3y) {
 			// from http://blog.hackers-cafe.net/2009/06/how-to-calculate-bezier-curves-bounding.html
-			var p0 = [p0x, p0y], p1 = [p1x, p1y], p2 = [p2x, p2y], p3 = [p3x, p3y];
-			this.addPoint(p0[0], p0[1]);
-			this.addPoint(p3[0], p3[1]);
+			var p0 = [p0x,p0y],p1 = [p1x,p1y],p2 = [p2x,p2y],p3 = [p3x,p3y];
+			this.addPoint(p0[0],p0[1]);
+			this.addPoint(p3[0],p3[1]);
 
 			for (i = 0; i <= 1; i++) {
 				var f = function (t) {
-					return Math.pow(1 - t, 3) * p0[i] + 3 * Math.pow(1 - t, 2) * t * p1[i] + 3 * (1 - t) * Math.pow(t, 2) * p2[i] + Math.pow(t, 3) * p3[i];
+					return Math.pow(1 - t,3) * p0[i] + 3 * Math.pow(1 - t,2) * t * p1[i] + 3 * (1 - t) * Math.pow(t,2) * p2[i] + Math.pow(t,3) * p3[i];
 				};
 				var b = 6 * p0[i] - 12 * p1[i] + 6 * p2[i];
 				var a = -3 * p0[i] + 9 * p1[i] - 9 * p2[i] + 3 * p3[i];
@@ -759,7 +692,7 @@ MORPH.PATH = {
 					continue;
 				}
 
-				var b2ac = Math.pow(b, 2) - 4 * c * a;
+				var b2ac = Math.pow(b,2) - 4 * c * a;
 				if (b2ac < 0)
 					continue;
 				var t1 = (-b + Math.sqrt(b2ac)) / (2 * a);
@@ -778,14 +711,14 @@ MORPH.PATH = {
 				}
 			}
 		};
-		this.isPointInBox = function (x, y) {
+		this.isPointInBox = function (x,y) {
 			return (this.x1 <= x && x <= this.x2 && this.y1 <= y && y <= this.y2);
 		};
 
-		this.addPoint(x1, y1);
-		this.addPoint(x2, y2);
+		this.addPoint(x1,y1);
+		this.addPoint(x2,y2);
 	},
-	PathParser: function (d) {
+	PathParser :function (d) {
 		//console.log("d ===! : " + d);
 		var _d = d || "";
 		this.tokens = _d.split(' ');
@@ -795,9 +728,9 @@ MORPH.PATH = {
 			this.i = -1;
 			this.command = '';
 			this.previousCommand = '';
-			this.start = new MORPH.GEOM.Point(0, 0);
-			this.control = new MORPH.GEOM.Point(0, 0);
-			this.current = new MORPH.GEOM.Point(0, 0);
+			this.start = new MORPH.GEOM.Point(0,0);
+			this.control = new MORPH.GEOM.Point(0,0);
+			this.current = new MORPH.GEOM.Point(0,0);
 			this.points = [];
 			this.angles = [];
 		};
@@ -838,7 +771,7 @@ MORPH.PATH = {
 			this.command = this.getToken();
 		};
 		this.getPoint = function () {
-			var p = new MORPH.GEOM.Point(this.getScalar(), this.getScalar());
+			var p = new MORPH.GEOM.Point(this.getScalar(),this.getScalar());
 			return this.makeAbsolute(p);
 		};
 		this.getAsControlPoint = function () {
@@ -856,7 +789,7 @@ MORPH.PATH = {
 				return this.current;
 			}
 			// reflect point
-			return new MORPH.GEOM.Point(2 * this.current.x - this.control.x, 2 * this.current.y - this.control.y);
+			return new MORPH.GEOM.Point(2 * this.current.x - this.control.x,2 * this.current.y - this.control.y);
 		};
 		this.makeAbsolute = function (p) {
 			if (this.isRelativeCommand()) {
@@ -866,15 +799,15 @@ MORPH.PATH = {
 			return p;
 		};
 
-		this.addMarker = function (p, from, priorTo) {
+		this.addMarker = function (p,from,priorTo) {
 			// if the last angle isn't filled in because we didn't have this point yet ...
 			if (priorTo != null && this.angles.length > 0 && this.angles[this.angles.length - 1] == null) {
 				this.angles[this.angles.length - 1] = this.points[this.points.length - 1].angleTo(priorTo);
 			}
-			this.addMarkerAngle(p, from == null ? null : from.angleTo(p));
+			this.addMarkerAngle(p,from == null ? null : from.angleTo(p));
 		};
 
-		this.addMarkerAngle = function (p, a) {
+		this.addMarkerAngle = function (p,a) {
 			this.points.push(p);
 			this.angles.push(a);
 		};
@@ -896,7 +829,7 @@ MORPH.PATH = {
 			return this.angles;
 		}
 	},
-	Path: function (obj) {
+	Path       :function (obj) {
 		//var i,_currentSegment;
 
 		this.id = obj.id || "";
@@ -907,24 +840,24 @@ MORPH.PATH = {
 		var bb = new MORPH.PATH.BoundingBox();
 
 		this.clone = function () {
-			var p = new Path({d: _d});
+			var p = new Path({d:_d});
 			p.setRectangle(_rect.clone());
 			p.name = this.name;
 			return p;
 		};
 
-		this.translate = function (x, y) {
+		this.translate = function (x,y) {
 			for (var i = 0; i < _segs.length; i++) {
 				var seg = _segs[i];
-				seg.translate(x, y);
+				seg.translate(x,y);
 			}
-			_rect.translate(x, y);
+			_rect.translate(x,y);
 		};
 		this.setScale = function (scale) {
 			//trace("set scale : " + scale);
 			for (var i = 0; i < _segs.length; i++) {
 				var seg = _segs[i];
-				seg.scale(scale, new Point(0, 0));
+				seg.scale(scale,new Point(0,0));
 			}
 			_rect.scale(scale);
 		};
@@ -973,50 +906,50 @@ MORPH.PATH = {
 		 }
 		 return getLastPoint().equals(pt);
 		 };*/
-		var addPoint = function (x, y) {
-			var p = new MORPH.GEOM.Point(x, y);
+		var addPoint = function (x,y) {
+			var p = new MORPH.GEOM.Point(x,y);
 			if (!isFirstPoint()) {
-				addLineSegment(getLastPoint(), p);
+				addLineSegment(getLastPoint(),p);
 			}
 			_points.push(p);
 			//trace("add point -->" + x + " : " + y + "/" + _points.length);
 		};
-		var addCurvePoint = function (ctrl1, ctrl2, pt2) {
+		var addCurvePoint = function (ctrl1,ctrl2,pt2) {
 			var pt1 = getLastPoint();
-			addSegment(pt1, ctrl1, pt2, ctrl2);
+			addSegment(pt1,ctrl1,pt2,ctrl2);
 			_points.push(pt2);
 			//trace("add point -->" + pt2.x + " : " + pt2.y + "/" + _points.length);
 
 		};
-		var addLineSegment = function (p1, p2) {
-			_segs.push(new MORPH.Segment(p1, p1, p2, p2));
+		var addLineSegment = function (p1,p2) {
+			_segs.push(new MORPH.Segment(p1,p1,p2,p2));
 			//trace("add line :" + p1.x + "/" + p1.y + " : " + p2.x + "/" + p2.y + "/" + _segs.length);
 		};
-		var addSegment = function (p1, c1, p2, c2) {
-			_segs.push(new MORPH.Segment(p1, c1, p2, c2));
+		var addSegment = function (p1,c1,p2,c2) {
+			_segs.push(new MORPH.Segment(p1,c1,p2,c2));
 			//trace("add seg :" + p1.x + "/" + p1.y + " : " + p2.x + "/" + p2.y + "/" + _segs.length);
 		};
 
-		_d = _d.replace(/,/gm, ' ');
+		_d = _d.replace(/,/gm,' ');
 		// get rid of all commas
-		_d = _d.replace(/([MmZzLlHhVvCcSsQqTtAa])([MmZzLlHhVvCcSsQqTtAa])/gm, '$1 $2');
+		_d = _d.replace(/([MmZzLlHhVvCcSsQqTtAa])([MmZzLlHhVvCcSsQqTtAa])/gm,'$1 $2');
 		// separate commands from commands
-		_d = _d.replace(/([MmZzLlHhVvCcSsQqTtAa])([MmZzLlHhVvCcSsQqTtAa])/gm, '$1 $2');
+		_d = _d.replace(/([MmZzLlHhVvCcSsQqTtAa])([MmZzLlHhVvCcSsQqTtAa])/gm,'$1 $2');
 		// separate commands from commands
-		_d = _d.replace(/([MmZzLlHhVvCcSsQqTtAa])([^\s])/gm, '$1 $2');
+		_d = _d.replace(/([MmZzLlHhVvCcSsQqTtAa])([^\s])/gm,'$1 $2');
 		// separate commands from points
-		_d = _d.replace(/([^\s])([MmZzLlHhVvCcSsQqTtAa])/gm, '$1 $2');
+		_d = _d.replace(/([^\s])([MmZzLlHhVvCcSsQqTtAa])/gm,'$1 $2');
 		// separate commands from points
-		_d = _d.replace(/([0-9])([+\-])/gm, '$1 $2');
+		_d = _d.replace(/([0-9])([+\-])/gm,'$1 $2');
 		// separate digits when no comma
-		_d = _d.replace(/(\.[0-9]*)(\.)/gm, '$1 $2');
+		_d = _d.replace(/(\.[0-9]*)(\.)/gm,'$1 $2');
 		// separate digits when no comma
-		_d = _d.replace(/([Aa](\s+[0-9]+){3})\s+([01])\s*([01])/gm, '$1 $3 $4 ');
+		_d = _d.replace(/([Aa](\s+[0-9]+){3})\s+([01])\s*([01])/gm,'$1 $3 $4 ');
 		// shorthand elliptical arc path syntax
 		//_d = svg.compressSpaces(_d);
-		_d = _d.replace(/[\s\r\t\n]+/gm, ' ');
+		_d = _d.replace(/[\s\r\t\n]+/gm,' ');
 		// compress multiple spaces
-		_d = _d.replace(/^\s+|\s+$/g, '');
+		_d = _d.replace(/^\s+|\s+$/g,'');
 
 		var pp = new MORPH.PATH.PathParser(_d);
 		pp.reset();
@@ -1028,15 +961,15 @@ MORPH.PATH = {
 				case 'm':
 					var p = pp.getAsCurrentPoint();
 					pp.addMarker(p);
-					addPoint(p.x, p.y);
-					bb.addPoint(p.x, p.y);
+					addPoint(p.x,p.y);
+					bb.addPoint(p.x,p.y);
 
 					pp.start = pp.current;
 					while (!pp.isCommandOrEnd()) {
 						var p = pp.getAsCurrentPoint();
-						pp.addMarker(p, pp.start);
-						addPoint(p.x, p.y);
-						bb.addPoint(p.x, p.y);
+						pp.addMarker(p,pp.start);
+						addPoint(p.x,p.y);
+						bb.addPoint(p.x,p.y);
 					}
 					break;
 				case 'L':
@@ -1044,29 +977,29 @@ MORPH.PATH = {
 					while (!pp.isCommandOrEnd()) {
 						var c = pp.current;
 						var p = pp.getAsCurrentPoint();
-						pp.addMarker(p, c);
-						addPoint(p.x, p.y);
-						bb.addPoint(p.x, p.y);
+						pp.addMarker(p,c);
+						addPoint(p.x,p.y);
+						bb.addPoint(p.x,p.y);
 					}
 					break;
 				case 'H':
 				case 'h':
 					while (!pp.isCommandOrEnd()) {
-						var newP = new MORPH.GEOM.Point((pp.isRelativeCommand() ? pp.current.x : 0) + pp.getScalar(), pp.current.y);
-						pp.addMarker(newP, pp.current);
+						var newP = new MORPH.GEOM.Point((pp.isRelativeCommand() ? pp.current.x : 0) + pp.getScalar(),pp.current.y);
+						pp.addMarker(newP,pp.current);
 						pp.current = newP;
-						addPoint(newP.x, newP.y);
-						bb.addPoint(pp.current.x, pp.current.y);
+						addPoint(newP.x,newP.y);
+						bb.addPoint(pp.current.x,pp.current.y);
 					}
 					break;
 				case 'V':
 				case 'v':
 					while (!pp.isCommandOrEnd()) {
-						var newP = new MORPH.GEOM.Point(pp.current.x, (pp.isRelativeCommand() ? pp.current.y : 0) + pp.getScalar());
-						pp.addMarker(newP, pp.current);
+						var newP = new MORPH.GEOM.Point(pp.current.x,(pp.isRelativeCommand() ? pp.current.y : 0) + pp.getScalar());
+						pp.addMarker(newP,pp.current);
 						pp.current = newP;
-						addPoint(newP.x, newP.y);
-						bb.addPoint(pp.current.x, pp.current.y);
+						addPoint(newP.x,newP.y);
+						bb.addPoint(pp.current.x,pp.current.y);
 					}
 					break;
 				case 'C':
@@ -1076,9 +1009,9 @@ MORPH.PATH = {
 						var p1 = pp.getPoint();
 						var cntrl = pp.getAsControlPoint();
 						var cp = pp.getAsCurrentPoint();
-						pp.addMarker(cp, cntrl, p1);
-						addCurvePoint(new MORPH.GEOM.Point(p1.x, p1.y), new MORPH.GEOM.Point(cntrl.x, cntrl.y), new MORPH.GEOM.Point(cp.x, cp.y));
-						bb.addBezierCurve(curr.x, curr.y, p1.x, p1.y, cntrl.x, cntrl.y, cp.x, cp.y);
+						pp.addMarker(cp,cntrl,p1);
+						addCurvePoint(new MORPH.GEOM.Point(p1.x,p1.y),new MORPH.GEOM.Point(cntrl.x,cntrl.y),new MORPH.GEOM.Point(cp.x,cp.y));
+						bb.addBezierCurve(curr.x,curr.y,p1.x,p1.y,cntrl.x,cntrl.y,cp.x,cp.y);
 					}
 					break;
 				case 'S':
@@ -1088,9 +1021,9 @@ MORPH.PATH = {
 						var p1 = pp.getReflectedControlPoint();
 						var cntrl = pp.getAsControlPoint();
 						var cp = pp.getAsCurrentPoint();
-						pp.addMarker(cp, cntrl, p1);
-						addCurvePoint(new MORPH.GEOM.Point(p1.x, p1.y), new MORPH.GEOM.Point(cntrl.x, cntrl.y), new MORPH.GEOM.Point(cp.x, cp.y));
-						bb.addBezierCurve(curr.x, curr.y, p1.x, p1.y, cntrl.x, cntrl.y, cp.x, cp.y);
+						pp.addMarker(cp,cntrl,p1);
+						addCurvePoint(new MORPH.GEOM.Point(p1.x,p1.y),new MORPH.GEOM.Point(cntrl.x,cntrl.y),new MORPH.GEOM.Point(cp.x,cp.y));
+						bb.addBezierCurve(curr.x,curr.y,p1.x,p1.y,cntrl.x,cntrl.y,cp.x,cp.y);
 					}
 					break;
 				case 'Q':
@@ -1099,9 +1032,9 @@ MORPH.PATH = {
 						var curr = pp.current;
 						var cntrl = pp.getAsControlPoint();
 						var cp = pp.getAsCurrentPoint();
-						pp.addMarker(cp, cntrl, cntrl);
-						addCurvePoint(new MORPH.GEOM.Point(p1.x, p1.y), new MORPH.GEOM.Point(cntrl.x, cntrl.y), new MORPH.GEOM.Point(cp.x, cp.y));
-						bb.addQuadraticCurve(curr.x, curr.y, cntrl.x, cntrl.y, cp.x, cp.y);
+						pp.addMarker(cp,cntrl,cntrl);
+						addCurvePoint(new MORPH.GEOM.Point(p1.x,p1.y),new MORPH.GEOM.Point(cntrl.x,cntrl.y),new MORPH.GEOM.Point(cp.x,cp.y));
+						bb.addQuadraticCurve(curr.x,curr.y,cntrl.x,cntrl.y,cp.x,cp.y);
 					}
 					break;
 				case 'T':
@@ -1111,9 +1044,9 @@ MORPH.PATH = {
 						var cntrl = pp.getReflectedControlPoint();
 						pp.control = cntrl;
 						var cp = pp.getAsCurrentPoint();
-						pp.addMarker(cp, cntrl, cntrl);
-						addCurvePoint(new MORPH.GEOM.Point(p1.x, p1.y), new MORPH.GEOM.Point(cntrl.x, cntrl.y), new MORPH.GEOM.Point(cp.x, cp.y));
-						bb.addQuadraticCurve(curr.x, curr.y, cntrl.x, cntrl.y, cp.x, cp.y);
+						pp.addMarker(cp,cntrl,cntrl);
+						addCurvePoint(new MORPH.GEOM.Point(p1.x,p1.y),new MORPH.GEOM.Point(cntrl.x,cntrl.y),new MORPH.GEOM.Point(cp.x,cp.y));
+						bb.addQuadraticCurve(curr.x,curr.y,cntrl.x,cntrl.y,cp.x,cp.y);
 					}
 					break;
 				case 'A':
@@ -1132,41 +1065,41 @@ MORPH.PATH = {
 						// Conversion from endpoint to center parameterization
 						// http://www.w3.org/TR/SVG11/implnote.html#ArcImplementationNotes
 						// x1', y1'
-						var currp = new MORPH.GEOM.Point(Math.cos(xAxisRotation) * (curr.x - cp.x) / 2.0 + Math.sin(xAxisRotation) * (curr.y - cp.y) / 2.0, -Math.sin(xAxisRotation) * (curr.x - cp.x) / 2.0 + Math.cos(xAxisRotation) * (curr.y - cp.y) / 2.0);
+						var currp = new MORPH.GEOM.Point(Math.cos(xAxisRotation) * (curr.x - cp.x) / 2.0 + Math.sin(xAxisRotation) * (curr.y - cp.y) / 2.0,-Math.sin(xAxisRotation) * (curr.x - cp.x) / 2.0 + Math.cos(xAxisRotation) * (curr.y - cp.y) / 2.0);
 						// adjust radii
-						var l = Math.pow(currp.x, 2) / Math.pow(rx, 2) + Math.pow(currp.y, 2) / Math.pow(ry, 2);
+						var l = Math.pow(currp.x,2) / Math.pow(rx,2) + Math.pow(currp.y,2) / Math.pow(ry,2);
 						if (l > 1) {
 							rx *= Math.sqrt(l);
 							ry *= Math.sqrt(l);
 						}
 						// cx', cy'
-						var s = (largeArcFlag == sweepFlag ? -1 : 1) * Math.sqrt(((Math.pow(rx, 2) * Math.pow(ry, 2)) - (Math.pow(rx, 2) * Math.pow(currp.y, 2)) - (Math.pow(ry, 2) * Math.pow(currp.x, 2))) / (Math.pow(rx, 2) * Math.pow(currp.y, 2) + Math.pow(ry, 2) * Math.pow(currp.x, 2)));
+						var s = (largeArcFlag == sweepFlag ? -1 : 1) * Math.sqrt(((Math.pow(rx,2) * Math.pow(ry,2)) - (Math.pow(rx,2) * Math.pow(currp.y,2)) - (Math.pow(ry,2) * Math.pow(currp.x,2))) / (Math.pow(rx,2) * Math.pow(currp.y,2) + Math.pow(ry,2) * Math.pow(currp.x,2)));
 						if (isNaN(s))
 							s = 0;
-						var cpp = new MORPH.GEOM.Point(s * rx * currp.y / ry, s * -ry * currp.x / rx);
+						var cpp = new MORPH.GEOM.Point(s * rx * currp.y / ry,s * -ry * currp.x / rx);
 						// cx, cy
-						var centp = new MORPH.GEOM.Point((curr.x + cp.x) / 2.0 + Math.cos(xAxisRotation) * cpp.x - Math.sin(xAxisRotation) * cpp.y, (curr.y + cp.y) / 2.0 + Math.sin(xAxisRotation) * cpp.x + Math.cos(xAxisRotation) * cpp.y);
+						var centp = new MORPH.GEOM.Point((curr.x + cp.x) / 2.0 + Math.cos(xAxisRotation) * cpp.x - Math.sin(xAxisRotation) * cpp.y,(curr.y + cp.y) / 2.0 + Math.sin(xAxisRotation) * cpp.x + Math.cos(xAxisRotation) * cpp.y);
 						// vector magnitude
 						var m = function (v) {
-							return Math.sqrt(Math.pow(v[0], 2) + Math.pow(v[1], 2));
+							return Math.sqrt(Math.pow(v[0],2) + Math.pow(v[1],2));
 						}
 						// ratio between two vectors
-						var r = function (u, v) {
+						var r = function (u,v) {
 							return (u[0] * v[0] + u[1] * v[1]) / (m(u) * m(v))
 						}
 						// angle between two vectors
-						var a = function (u, v) {
-							return (u[0] * v[1] < u[1] * v[0] ? -1 : 1) * Math.acos(r(u, v));
+						var a = function (u,v) {
+							return (u[0] * v[1] < u[1] * v[0] ? -1 : 1) * Math.acos(r(u,v));
 						}
 						// initial angle
-						var a1 = a([1, 0], [(currp.x - cpp.x) / rx, (currp.y - cpp.y) / ry]);
+						var a1 = a([1,0],[(currp.x - cpp.x) / rx,(currp.y - cpp.y) / ry]);
 						// angle delta
-						var u = [(currp.x - cpp.x) / rx, (currp.y - cpp.y) / ry];
-						var v = [(-currp.x - cpp.x) / rx, (-currp.y - cpp.y) / ry];
-						var ad = a(u, v);
-						if (r(u, v) <= -1)
+						var u = [(currp.x - cpp.x) / rx,(currp.y - cpp.y) / ry];
+						var v = [(-currp.x - cpp.x) / rx,(-currp.y - cpp.y) / ry];
+						var ad = a(u,v);
+						if (r(u,v) <= -1)
 							ad = Math.PI;
-						if (r(u, v) >= 1)
+						if (r(u,v) >= 1)
 							ad = 0;
 
 						if (sweepFlag == 0 && ad > 0)
@@ -1175,20 +1108,20 @@ MORPH.PATH = {
 							ad = ad + 2 * Math.PI;
 
 						// for markers
-						var halfWay = new MORPH.GEOM.Point(centp.x + rx * Math.cos((a1 + (a1 + ad)) / 2), centp.y + ry * Math.sin((a1 + (a1 + ad)) / 2));
-						pp.addMarkerAngle(halfWay, (a1 + (a1 + ad)) / 2 + (sweepFlag == 0 ? -1 : 1) * Math.PI / 2);
-						pp.addMarkerAngle(cp, (a1 + ad) + (sweepFlag == 0 ? -1 : 1) * Math.PI / 2);
+						var halfWay = new MORPH.GEOM.Point(centp.x + rx * Math.cos((a1 + (a1 + ad)) / 2),centp.y + ry * Math.sin((a1 + (a1 + ad)) / 2));
+						pp.addMarkerAngle(halfWay,(a1 + (a1 + ad)) / 2 + (sweepFlag == 0 ? -1 : 1) * Math.PI / 2);
+						pp.addMarkerAngle(cp,(a1 + ad) + (sweepFlag == 0 ? -1 : 1) * Math.PI / 2);
 
-						addPoint(halfWay.x, halfWay.y)
-						addPoint(cp.x, cp.y);
+						addPoint(halfWay.x,halfWay.y)
+						addPoint(cp.x,cp.y);
 
-						bb.addPoint(cp.x, cp.y);
+						bb.addPoint(cp.x,cp.y);
 					}
 					break;
 				case 'Z':
 				case 'z':
 					pp.current = pp.start;
-					addPoint(pp.start.x, pp.start.y);
+					addPoint(pp.start.x,pp.start.y);
 			}
 		}
 
@@ -1198,12 +1131,12 @@ MORPH.PATH = {
 
 			var markers = [];
 			for (var i = 0; i < points.length; i++) {
-				markers.push([points[i], angles[i]]);
+				markers.push([points[i],angles[i]]);
 			}
 			return markers;
 		};
 	},
-	clonePaths: function (paths) {
+	clonePaths :function (paths) {
 		var newPaths = []
 		for (var i = 0; i < paths.length; i++) {
 			newPaths.push(paths[i]);
