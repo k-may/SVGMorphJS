@@ -21,16 +21,16 @@
 
 })();
 
-var MORPH = (function() {
+var MORPH = (function () {
 	var _morphs = [];
 	return {
 
-		add : function(morph) {
+		add: function (morph) {
 			_morphs.push(morph);
 		},
 
 		//todo check performance on time
-		update : function(time) {
+		update: function (time) {
 
 			if (_morphs.length === 0)
 				return false;
@@ -49,14 +49,14 @@ var MORPH = (function() {
 			}
 			return true;
 		},
-		draw : function(p) {
+		draw: function (p) {
 			var i = 0, numMorphs = _morphs.length;
 			while (i < numMorphs) {
 				var morph = _morphs[i++];
 				morph.draw(p)
 			}
 		},
-		clear : function(){
+		clear: function () {
 			_morphs = [];
 		}
 	}
@@ -70,7 +70,7 @@ var MORPH = (function() {
  * @returns {MORPH.Morph}
  * @constructor
  */
-MORPH.Morph = function(paths, obj) {
+MORPH.Morph = function (paths, obj) {
 	obj = obj || {};
 
 	var _paths = paths;
@@ -88,6 +88,7 @@ MORPH.Morph = function(paths, obj) {
 	function init() {
 		reset();
 	}
+
 	function reset() {
 		var i = 0;
 		if (_numPaths > 1) {
@@ -101,14 +102,14 @@ MORPH.Morph = function(paths, obj) {
 			_morphablePathCollection.push(_paths[0]);
 	}
 
-	this.start = function(time) {
+	this.start = function (time) {
 		_startTime = time !== undefined ? time : window.performance.now();
 		_startTime += _delayTime;
 		MORPH.add(this);
 
 		return this;
 	};
-	this.update = function(time) {
+	this.update = function (time) {
 		var isComplete, index = 0;
 
 		_ratio = Math.max(0, Math.min(1, (time - _startTime) / _duration));
@@ -137,21 +138,21 @@ MORPH.Morph = function(paths, obj) {
 
 		return true;
 	};
-	this.getCurrentPath = function() {
+	this.getCurrentPath = function () {
 		return _paths[_paths.length - 1];
 	};
-	this.getCurrentRatio = function() {
+	this.getCurrentRatio = function () {
 		var cR = (_ratio * (_numPaths - 1)) - _current;
 		return cR;
 	};
-	this.getCurrentMorphablePath = function() {
+	this.getCurrentMorphablePath = function () {
 		if (_current < _morphablePathCollection.length)
 			return _morphablePathCollection[_current];
 		else {
 			console.log("Error : something wrong here!");
 		}
 	};
-	this.getShape = function() {
+	this.getShape = function () {
 		if (_numPaths > 1)
 			return this.currentShape();
 		else {
@@ -159,7 +160,7 @@ MORPH.Morph = function(paths, obj) {
 			return new MORPH.Shape(path.getSegments());
 		}
 	};
-	this.currentShape = function() {
+	this.currentShape = function () {
 		var currentMorphablePathGroups = this.getCurrentMorphablePath().morphableGroups;
 
 		var ratio = this.getCurrentRatio();
@@ -175,11 +176,11 @@ MORPH.Morph = function(paths, obj) {
 
 		return new MORPH.Shape(segs);
 	};
-	this.onComplete = function(callback) {
+	this.onComplete = function (callback) {
 		_onCompleteCallback = callback;
 		return this;
 	};
-	this.setScale = function(scale) {
+	this.setScale = function (scale) {
 		for (var i = 0; i < _paths.length; i++) {
 			_paths[i].setScale(scale);
 		}
@@ -187,7 +188,7 @@ MORPH.Morph = function(paths, obj) {
 
 		return this;
 	};
-	this.getWidth = function() {
+	this.getWidth = function () {
 		var w = 0;
 		for (var i = 0; i < _paths.length; i++) {
 			if (_paths[i].width() > w)
@@ -195,7 +196,7 @@ MORPH.Morph = function(paths, obj) {
 		}
 		return w;
 	};
-	this.getHeight = function() {
+	this.getHeight = function () {
 		var h = 0;
 		for (var i = 0; i < _paths.length; i++) {
 			if (_paths[i].height() > h)
@@ -203,7 +204,7 @@ MORPH.Morph = function(paths, obj) {
 		}
 		return h;
 	};
-	this.setPos = function(x, y) {
+	this.setPos = function (x, y) {
 		var diffX = x - _x;
 		var diffY = y - _y;
 		_x = x;
@@ -220,7 +221,7 @@ MORPH.Morph = function(paths, obj) {
 	init();
 	return this;
 };
-MORPH.createMorphablePath = function(segGroup1, segGroup2) {
+MORPH.createMorphablePath = function (segGroup1, segGroup2) {
 	var morphableGroups = [];
 	var s1 = segGroup1.length;
 	var s2 = segGroup2.length;
@@ -250,7 +251,7 @@ MORPH.createMorphablePath = function(segGroup1, segGroup2) {
 	}
 	return new MORPH.MorphablePath(morphableGroups);
 };
-MORPH.MorphableGroup = function(origSegs, destSegs) {
+MORPH.MorphableGroup = function (origSegs, destSegs) {
 	var _origSegs = origSegs || [];
 	var _destSegs = destSegs || [];
 	var _heteromorphic = origSegs.length != destSegs.length;
@@ -270,15 +271,16 @@ MORPH.MorphableGroup = function(origSegs, destSegs) {
 
 		} else {
 
-			if(destSegs.length > 1){
+			if (destSegs.length > 1) {
 				_interSeg = new MORPH.Segment(_origSegs[0].pt1.Interpolate(_destSegs[0].pt1, 0.5), null, _origSegs[_origSegs.length - 1].pt2.Interpolate(_destSegs[_destSegs.length - 1].pt2, 0.5), null);
-			}else{
+			} else {
 				_interSeg = _destSegs[0].clone();
 			}
 
 			_segs = _startSegs = defineStartInterSegs();
 		}
 	}
+
 	function defineStartInterSegs() {
 		var interSegs = [];
 		var percentage, pt1, pt2;
@@ -295,6 +297,7 @@ MORPH.MorphableGroup = function(origSegs, destSegs) {
 		}
 		return interSegs
 	}
+
 	function defineEndInterSegs() {
 		var interSegs = [];
 		var percentage, pt1, pt2;
@@ -311,6 +314,7 @@ MORPH.MorphableGroup = function(origSegs, destSegs) {
 		}
 		return interSegs
 	}
+
 	function interpolateHetero(percentage) {
 		if (percentage >= 0.5) {
 			if (!_endSegs)
@@ -322,7 +326,8 @@ MORPH.MorphableGroup = function(origSegs, destSegs) {
 
 		return percentage < 0.5 ? percentage / 0.5 : (percentage - 0.5) / 0.5;
 	}
-	this.translate = function(x, y) {
+
+	this.translate = function (x, y) {
 
 		setSegmentPos(_origSegs, x, y);
 
@@ -338,7 +343,7 @@ MORPH.MorphableGroup = function(origSegs, destSegs) {
 
 		init();
 	};
-	this.interpolate = function(percentage) {
+	this.interpolate = function (percentage) {
 		var segs = [];
 
 		if (_heteromorphic && _destSegs.length > 1)
@@ -354,19 +359,19 @@ MORPH.MorphableGroup = function(origSegs, destSegs) {
 
 	init();
 };
-MORPH.MorphablePath = function(morphableGroups) {
+MORPH.MorphablePath = function (morphableGroups) {
 	return {
-		morphableGroups : morphableGroups
+		morphableGroups: morphableGroups
 	};
 };
-MORPH.Shape = function(segmentCollection) {
+MORPH.Shape = function (segmentCollection) {
 	var _segmentCollection = segmentCollection || [];
 	return {
-		segmentCollection : _segmentCollection,
-		length : segmentCollection.length
+		segmentCollection: _segmentCollection,
+		length: segmentCollection.length
 	};
 };
-MORPH.Segment = function(p1, ctrl1, p2, ctrl2) {
+MORPH.Segment = function (p1, ctrl1, p2, ctrl2) {
 	this.pt1 = p1 !== null ? p1.clone() : new MORPH.GEOM.Point();
 	this.pt2 = p2 !== null ? p2.clone() : new MORPH.GEOM.Point();
 	this.ctrl2 = ctrl2 || this.pt2.clone();
@@ -426,4 +431,54 @@ MORPH.MorphSegment = function (origSeg, destSeg) {
 		var ctrl2 = new MORPH.GEOM.Point(cV.x + this.origSeg.ctrl2.x, cV.y + this.origSeg.ctrl2.y);
 		return new MORPH.Segment(pt1, ctrl1, pt2, ctrl2);
 	};
+};
+MORPH.CanvasUtils = {
+	CreateBuffer: function () {
+
+		var canvas = document.createElement("canvas");
+		var ctx = canvas.getContext("2d");
+
+		return {
+			canvas: canvas,
+			ctx: ctx,
+			width: -1,
+			height: -1,
+			invalidated: false,
+			resize: function (w, h) {
+				if (w && h) {
+					w = Math.floor(w);
+					h = Math.floor(h);
+
+					if (this.width !== w || this.height !== h) {
+						this.canvas.width = w;
+						this.canvas.height = h;
+						this.width = w;
+						this.height = h;
+						return true;
+					}
+				}
+				return false;
+			},
+			clear: function () {
+				this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+			},
+			//for debug!
+			fill: function (color) {
+				this.ctx.fillStyle = color;
+				this.ctx.fillRect(0, 0, this.width, this.height);
+			},
+			getPixelRatio: function () {
+				//http://www.html5rocks.com/en/tutorials/canvas/hidpi/
+				var devicePixelRatio = window.devicePixelRatio || 1;
+				var backingStoreRatio = this.ctx.webkitBackingStorePixelRatio ||
+					this.ctx.mozBackingStorePixelRatio ||
+					this.ctx.msBackingStorePixelRatio ||
+					this.ctx.oBackingStorePixelRatio ||
+					this.ctx.backingStorePixelRatio || 1;
+
+				var ratio = devicePixelRatio / backingStoreRatio;
+				return ratio;
+			}
+		}
+	}
 };
