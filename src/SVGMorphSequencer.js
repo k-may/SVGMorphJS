@@ -49,6 +49,7 @@ MORPH.Morph = function (paths, obj) {
 	this.update = function (time) {
 		var isComplete, index = 0;
 
+		//todo test this!
 		/*_ratio = Math.max(0, Math.min(1, (time - _startTime) / _duration));
 
 		if (_numPaths > 1) {
@@ -57,6 +58,7 @@ MORPH.Morph = function (paths, obj) {
 		} else {
 			isComplete = _ratio >= 1;
 		}*/
+
 		var r = Math.max(0, Math.min(1, (time - _startTime) / _duration));
 		isComplete = this.setRatio(r);
 
