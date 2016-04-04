@@ -17,6 +17,7 @@ MORPH.MorphableGroup = (function () {
 	};
 
 	MorphableGroup.prototype = {
+
 		init: function () {
 			if (!this._heteromorphic) {
 				this._segs = [];
@@ -38,6 +39,7 @@ MORPH.MorphableGroup = (function () {
 				this._segs = this._startSegs = this.defineStartInterSegs();
 			}
 		},
+
 		defineStartInterSegs: function () {
 			var interSegs = [];
 			var percentage, pt1, pt2;
@@ -54,6 +56,7 @@ MORPH.MorphableGroup = (function () {
 			}
 			return interSegs
 		},
+
 		defineEndInterSegs: function () {
 			var interSegs = [];
 			var percentage, pt1, pt2;

@@ -1,3 +1,222 @@
+/**
+ * Created by kev on 16-03-23.
+ */
+// Include a performance.now polyfill
+(function () {
+
+	if ('performance' in window === false) {
+		window.performance = {};
+	}
+
+	// IE 8
+	Date.now = (Date.now || function () {
+		return new Date().getTime();
+	});
+
+	if ('now' in window.performance === false) {
+		var offset = window.performance.timing && window.performance.timing.navigationStart ? window.performance.timing.navigationStart
+			: Date.now();
+
+		window.performance.now = function () {
+			return Date.now() - offset;
+		};
+	}
+
+})();
+
+var MORPH = (function () {
+	var _morphs = [];
+	return {
+
+		add: function (morph) {
+			_morphs.push(morph);
+		},
+
+		//todo check performance on time
+		update: function (time) {
+
+			if (_morphs.length === 0)
+				return false;
+
+			var i = 0, numMorphs = _morphs.length;
+
+			time = time !== undefined ? time : window.performance.now();
+
+			while (i < numMorphs) {
+				if (_morphs[i].update(time)) {
+					i++;
+				} else {
+					_morphs.splice(i, 1);
+					numMorphs--;
+				}
+			}
+			return true;
+		},
+		draw: function (p) {
+			var i = 0, numMorphs = _morphs.length;
+			while (i < numMorphs) {
+				var morph = _morphs[i++];
+				morph.draw(p)
+			}
+		},
+		clear: function () {
+			_morphs = [];
+		}
+	}
+})();
+
+/**
+ * Created by kev on 16-03-23.
+ */
+MORPH.MorphableGroup = (function () {
+
+	var MorphableGroup = function (origSegs, destSegs) {
+		this._origSegs = origSegs || [];
+		this._destSegs = destSegs || [];
+		this._heteromorphic = origSegs.length != destSegs.length;
+		this._maxLength = Math.max(this._origSegs.length, this._destSegs.length);
+		this._segs;
+		this._startSegs;
+		this._endSegs;
+		this._interSeg;
+
+		this.init();
+	};
+
+	MorphableGroup.prototype = {
+
+		init: function () {
+			if (!this._heteromorphic) {
+				this._segs = [];
+				if (this._destSegs) {
+					for (var i = 0; i < this._maxLength; i++) {
+						this._segs.push(new MORPH.MorphSegment(this._origSegs[i], this._destSegs[i]));
+					}
+				} else
+					this._segs = this._origSegs;
+
+			} else {
+
+				if (this._destSegs.length > 1) {
+					this._interSeg = new MORPH.Segment(this._origSegs[0].pt1.Interpolate(this._destSegs[0].pt1, 0.5), null, this._origSegs[this._origSegs.length - 1].pt2.Interpolate(this._destSegs[this._destSegs.length - 1].pt2, 0.5), null);
+				} else {
+					this._interSeg = this._destSegs[0].clone();
+				}
+
+				this._segs = this._startSegs = this.defineStartInterSegs();
+			}
+		},
+
+		defineStartInterSegs: function () {
+			var interSegs = [];
+			var percentage, pt1, pt2;
+			pt2 = this._interSeg.pt1;
+			//create array of morph points
+			var i = 0;
+			while (i < this._origSegs.length) {
+				percentage = (i + 1) / this._origSegs.length;
+				pt1 = pt2.clone();
+				pt2 = this._interSeg.pt1.Interpolate(this._interSeg.pt2, percentage);
+				var seg = new MORPH.Segment(pt1, null, pt2, null);
+				interSegs.push(new MORPH.MorphSegment(this._origSegs[i], seg));
+				i++;
+			}
+			return interSegs
+		},
+
+		defineEndInterSegs: function () {
+			var interSegs = [];
+			var percentage, pt1, pt2;
+			pt2 = this._interSeg.pt1;
+			//create array of svgMorph points
+			var i = 0;
+			while (i < this._destSegs.length) {
+				percentage = (i + 1) / this._destSegs.length;
+				pt1 = pt2.clone();
+				pt2 = this._interSeg.pt1.Interpolate(this._interSeg.pt2, percentage);
+				var seg = new MORPH.Segment(pt1, null, pt2, null);
+				interSegs.push(new MORPH.MorphSegment(seg, this._destSegs[i]));
+				i++;
+			}
+			return interSegs
+		},
+		interpolateHetero: function (percentage) {
+			if (percentage >= 0.5) {
+				if (!this._endSegs){
+					this._endSegs = this.defineEndInterSegs(this._interSeg.pt1, this._destSegs);
+				}
+				this._segs = this._endSegs;
+			} else{
+				this._segs = this._startSegs;
+			}
+
+			return percentage < 0.5 ? percentage / 0.5 : (percentage - 0.5) / 0.5;
+		},
+		translate: function (x, y) {
+
+			function setSegmentPos(segArray, x, y) {
+				var i = 0;
+				for (var i = 0; i < segArray.length; i++) {
+					segArray[i].translate(x, y);
+				}
+			}
+
+			setSegmentPos(this._origSegs, x, y);
+
+			if (destSegs) {
+				setSegmentPos(this._destSegs, x, y);
+			}
+
+			this.init();
+		},
+		interpolate: function (percentage) {
+			var segs = [];
+
+			if (this._heteromorphic && this._destSegs.length > 1) {
+				percentage = this.interpolateHetero(percentage);
+			}
+
+			//todo interpolate points on curve for more realistic translation
+
+			for (var i = 0; i < this._segs.length; i++) {
+				segs.push(this._segs[i].interpolate(percentage));
+			}
+			return segs;
+		}
+	};
+
+
+	return MorphableGroup;
+})();
+
+
+/**
+ * Created by kev on 16-03-23.
+ */
+MORPH.MorphableGroupParallel = (function () {
+
+	var MorphableGroupParallel = function () {
+		this._origSegs = origSegs || [];
+		this._destSegs = destSegs || [];
+		this._heteromorphic = false;
+		this._maxLength = Math.max(this._origSegs.length, this._destSegs.length);
+		this._segs;
+		this._startSegs;
+		this._endSegs;
+		this._interSeg;
+	};
+	MorphableGroupParallel.prototype = MORPH.MorphableGroup.prototype;
+	MorphableGroupParallel.prototype.init = function () {
+
+	};
+
+	return MorphableGroupParallel;
+})();
+MORPH.MorphableGroupParallel.prototype = MORPH.MorphableGroup.prototype;
+MORPH.MorphableGroupParallel.prototype.init = function () {
+
+
+};
 
 /**
  * Morphable object
@@ -189,119 +408,6 @@ MORPH.createMorphablePath = function (segGroup1, segGroup2) {
 	return new MORPH.MorphablePath(morphableGroups);
 };
 
-MORPH.MorphableGroup = function (origSegs, destSegs) {
-	this._origSegs = origSegs || [];
-	this._destSegs = destSegs || [];
-	this._heteromorphic = origSegs.length != destSegs.length;
-	this._maxLength = Math.max(this._origSegs.length,this._destSegs.length);
-	this._segs;
-	this._startSegs;
-	this._endSegs;
-	this._interSeg;
-
-	function init() {
-		if (!this._heteromorphic) {
-			this._segs = [];
-			if (this._destSegs) {
-				for (var i = 0; i < this._maxLength; i++) {
-					this._segs.push(new MORPH.MorphSegment(this._origSegs[i],this._destSegs[i]));
-				}
-			} else
-				this._segs = this._origSegs;
-
-		} else {
-
-			if (this._destSegs.length > 1) {
-				this._interSeg = new MORPH.Segment(this._origSegs[0].pt1.Interpolate(this._destSegs[0].pt1, 0.5), null, this._origSegs[this._origSegs.length - 1].pt2.Interpolate(this._destSegs[this._destSegs.length - 1].pt2, 0.5), null);
-			} else {
-				this._interSeg = _destSegs[0].clone();
-			}
-
-			this._segs = this._startSegs = defineStartInterSegs();
-		}
-	}
-
-	function defineStartInterSegs() {
-		var interSegs = [];
-		var percentage, pt1, pt2;
-		pt2 = this._interSeg.pt1;
-		//create array of morph points
-		var i = 0;
-		while (i < _origSegs.length) {
-			percentage = (i + 1) / _origSegs.length;
-			pt1 = pt2.clone();
-			pt2 = this._interSeg.pt1.Interpolate(this._interSeg.pt2, percentage);
-			var seg = new MORPH.Segment(pt1, null, pt2, null);
-			interSegs.push(new MORPH.MorphSegment(this._origSegs[i], seg));
-			i++;
-		}
-		return interSegs
-	}
-
-	function defineEndInterSegs() {
-		var interSegs = [];
-		var percentage, pt1, pt2;
-		pt2 = _interSeg.pt1;
-		//create array of svgMorph points
-		var i = 0;
-		while (i < _destSegs.length) {
-			percentage = (i + 1) / _destSegs.length;
-			pt1 = pt2.clone();
-			pt2 = _interSeg.pt1.Interpolate(_interSeg.pt2, percentage);
-			var seg = new MORPH.Segment(pt1, null, pt2, null);
-			interSegs.push(new MORPH.MorphSegment(seg, _destSegs[i]));
-			i++;
-		}
-		return interSegs
-	}
-
-	function interpolateHetero(percentage) {
-		if (percentage >= 0.5) {
-			if (!_endSegs)
-				_endSegs = defineEndInterSegs(_interSeg.pt1, _destSegs);
-
-			_segs = _endSegs;
-		} else
-			_segs = _startSegs;
-
-		return percentage < 0.5 ? percentage / 0.5 : (percentage - 0.5) / 0.5;
-	}
-
-	this.translate = function (x, y) {
-
-		setSegmentPos(_origSegs, x, y);
-
-		if (destSegs)
-			setSegmentPos(_destSegs, x, y);
-
-		function setSegmentPos(segArray, x, y) {
-			var i = 0;
-			for (var i = 0; i < segArray.length; i++) {
-				segArray[i].translate(x, y);
-			}
-		}
-
-		init();
-	};
-	this.interpolate = function (percentage) {
-		var segs = [];
-
-		if (_heteromorphic && _destSegs.length > 1)
-			percentage = interpolateHetero(percentage);
-
-		//todo interpolate points on curve for more realistic translation
-
-		for (var i = 0; i < _segs.length; i++) {
-			segs.push(_segs[i].interpolate(percentage));
-		}
-		return segs;
-	};
-
-	init();
-};
-MORPH.MorphableGroupParallel = function(){
-
-}
 MORPH.MorphablePath = function (morphableGroups) {
 	return {
 		morphableGroups: morphableGroups
@@ -1185,3 +1291,58 @@ var MorphDrawer = function(length, colors, strokeWeight) {
 	}
 
 }
+
+/**
+ * Created by kev on 16-03-23.
+ */
+
+MORPH.CanvasUtils = {
+	CreateBuffer: function () {
+
+		var canvas = document.createElement("canvas");
+		var ctx = canvas.getContext("2d");
+
+		return {
+			canvas: canvas,
+			ctx: ctx,
+			width: -1,
+			height: -1,
+			invalidated: false,
+			resize: function (w, h) {
+				if (w && h) {
+					w = Math.floor(w);
+					h = Math.floor(h);
+
+					if (this.width !== w || this.height !== h) {
+						this.canvas.width = w;
+						this.canvas.height = h;
+						this.width = w;
+						this.height = h;
+						return true;
+					}
+				}
+				return false;
+			},
+			clear: function () {
+				this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+			},
+			//for debug!
+			fill: function (color) {
+				this.ctx.fillStyle = color;
+				this.ctx.fillRect(0, 0, this.width, this.height);
+			},
+			getPixelRatio: function () {
+				//http://www.html5rocks.com/en/tutorials/canvas/hidpi/
+				var devicePixelRatio = window.devicePixelRatio || 1;
+				var backingStoreRatio = this.ctx.webkitBackingStorePixelRatio ||
+					this.ctx.mozBackingStorePixelRatio ||
+					this.ctx.msBackingStorePixelRatio ||
+					this.ctx.oBackingStorePixelRatio ||
+					this.ctx.backingStorePixelRatio || 1;
+
+				var ratio = devicePixelRatio / backingStoreRatio;
+				return ratio;
+			}
+		}
+	}
+};
