@@ -73,6 +73,7 @@ var MORPH = (function() {
 MORPH.Morph = function(paths, obj) {
 	obj = obj || {};
 
+	//todo protect this variables!
 	var _paths = paths;
 	var _current = 0;
 	var _morphablePathCollection = [];
@@ -111,14 +112,16 @@ MORPH.Morph = function(paths, obj) {
 	this.update = function(time) {
 		var isComplete, index = 0;
 
-		_ratio = Math.max(0, Math.min(1, (time - _startTime) / _duration));
+		/*_ratio = Math.max(0, Math.min(1, (time - _startTime) / _duration));
 
 		if (_numPaths > 1) {
 			index = Math.floor(_ratio * (_numPaths - 1));
 			isComplete = index >= _numPaths - 1;
 		} else {
 			isComplete = _ratio >= 1;
-		}
+		}*/
+		var r = Math.max(0, Math.min(1, (time - _startTime) / _duration));
+		isComplete = this.setRatio(r);
 
 		if (isComplete) {
 
@@ -140,6 +143,16 @@ MORPH.Morph = function(paths, obj) {
 	this.getCurrentPath = function() {
 		return _paths[_paths.length - 1];
 	};
+	this.setRatio = function(ratio){
+		_ratio = ratio;//Math.max(0, Math.min(1, (time - _startTime) / _duration));
+		if (_numPaths > 1) {
+			index = Math.floor(_ratio * (_numPaths - 1));
+			return index >= _numPaths - 1;
+		} else {
+			return _ratio >= 1;
+		}
+
+	};
 	this.getCurrentRatio = function() {
 		var cR = (_ratio * (_numPaths - 1)) - _current;
 		return cR;
@@ -159,11 +172,11 @@ MORPH.Morph = function(paths, obj) {
 			return new MORPH.Shape(path.getSegments());
 		}
 	};
+
 	this.currentShape = function() {
 		var currentMorphablePathGroups = this.getCurrentMorphablePath().morphableGroups;
 
 		var ratio = this.getCurrentRatio();
-		var numGroups = currentMorphablePathGroups.length;
 		var numSegs = currentMorphablePathGroups.length;
 		var segs = [];
 
