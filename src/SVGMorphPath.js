@@ -92,8 +92,18 @@ MORPH.GEOM = {
  * @param callback
  * @constructor
  */
-MORPH.LoadPaths = function (paths) {
+MORPH.LoadShapes = function (paths) {
 
+	if(paths.constructor !== Array){
+		paths = [paths];
+	}
+	var promises = paths.map(function(path){
+		return MORPH.LoadShape(path);
+	});
+
+	return Promise.all(promises);
+};
+MORPH.LoadShape = function(paths){
 	return MORPH.LoadSVG(paths)
 		.then(function (data) {
 
@@ -207,7 +217,23 @@ MORPH.SVG = {
 					path += "L " + x + " " + y + " ";
 				}
 			}
+			//remove last space
 			path = path.substr(0, path.length - 2);
+			arr.push(path);
+		}
+
+		var rects = svg.getElementsByTagName('rect');
+		for(var i =0 ; i < rects.length; i ++){
+			var rect = rects[i];
+			var x = parseFloat(rect.getAttribute("x"));
+			var y = parseFloat(rect.getAttribute("y"));
+			var width = parseFloat(rect.getAttribute("width"));
+			var height = parseFloat(rect.getAttribute("height"));
+			var path = "M" + x + " " + y;
+			path  += "L" + (x + width) + " " + y + " ";
+			path += "L" + (x + width) + " " + (y + height) + " ";
+			path += "L" + x + " " + (y + height) + " ";
+			path += "L" + x + " " + y;
 			arr.push(path);
 		}
 

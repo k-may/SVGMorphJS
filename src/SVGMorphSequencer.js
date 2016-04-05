@@ -198,7 +198,11 @@ MORPH.createMorphablePath = function (segGroup1, segGroup2) {
 			}
 
 		}
-		morphableGroups.push(new MORPH.MorphableGroup(arr1, arr2));
+		if(arr1.length !== arr2.length){
+			morphableGroups.push(new MORPH.MorphableGroup(arr1, arr2));
+		}else{
+			morphableGroups.push(new MORPH.MorphableGroupParallel(arr1, arr2));
+		}
 	}
 	return new MORPH.MorphablePath(morphableGroups);
 };

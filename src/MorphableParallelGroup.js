@@ -4,25 +4,19 @@
 MORPH.MorphableGroupParallel = (function () {
 
 	var MorphableGroupParallel = function () {
-		this._origSegs = origSegs || [];
-		this._destSegs = destSegs || [];
-		this._heteromorphic = false;
-		this._maxLength = Math.max(this._origSegs.length, this._destSegs.length);
-		this._segs;
-		this._startSegs;
-		this._endSegs;
-		this._interSeg;
+		MORPH.MorphableGroup.apply(this, arguments);
 	};
-	MorphableGroupParallel.prototype = MORPH.MorphableGroup.prototype;
+	MorphableGroupParallel.prototype = Object.create(MORPH.MorphableGroup.prototype);
+	MorphableGroupParallel.constructor = MORPH.MorphableGroup;
 	MorphableGroupParallel.prototype.init = function () {
-
+		this._segs = [];
+		if (this._destSegs) {
+			for (var i = 0; i < this._maxLength; i++) {
+				this._segs.push(new MORPH.MorphSegment(this._origSegs[i], this._destSegs[i]));
+			}
+		} else
+			this._segs = this._origSegs;
 	};
 
 	return MorphableGroupParallel;
 })();
-MORPH.MorphableGroupParallel.prototype = MORPH.MorphableGroup.prototype;
-/*
-MORPH.MorphableGroupParallel.prototype.init = function () {
-
-};
-*/

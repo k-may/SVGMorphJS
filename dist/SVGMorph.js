@@ -86,7 +86,7 @@ MORPH.MorphableGroup = (function () {
 	MorphableGroup.prototype = {
 
 		init: function () {
-			if (!this._heteromorphic) {
+			/*if (!this._heteromorphic) {
 				this._segs = [];
 				if (this._destSegs) {
 					for (var i = 0; i < this._maxLength; i++) {
@@ -96,7 +96,7 @@ MORPH.MorphableGroup = (function () {
 					this._segs = this._origSegs;
 
 			} else {
-
+*/
 				if (this._destSegs.length > 1) {
 					this._interSeg = new MORPH.Segment(this._origSegs[0].pt1.Interpolate(this._destSegs[0].pt1, 0.5), null, this._origSegs[this._origSegs.length - 1].pt2.Interpolate(this._destSegs[this._destSegs.length - 1].pt2, 0.5), null);
 				} else {
@@ -104,7 +104,7 @@ MORPH.MorphableGroup = (function () {
 				}
 
 				this._segs = this._startSegs = this.defineStartInterSegs();
-			}
+			//}
 		},
 
 		defineStartInterSegs: function () {
@@ -196,28 +196,22 @@ MORPH.MorphableGroup = (function () {
 MORPH.MorphableGroupParallel = (function () {
 
 	var MorphableGroupParallel = function () {
-		this._origSegs = origSegs || [];
-		this._destSegs = destSegs || [];
-		this._heteromorphic = false;
-		this._maxLength = Math.max(this._origSegs.length, this._destSegs.length);
-		this._segs;
-		this._startSegs;
-		this._endSegs;
-		this._interSeg;
+		MORPH.MorphableGroup.apply(this, arguments);
 	};
-	MorphableGroupParallel.prototype = MORPH.MorphableGroup.prototype;
+	MorphableGroupParallel.prototype = Object.create(MORPH.MorphableGroup.prototype);
+	MorphableGroupParallel.constructor = MORPH.MorphableGroup;
 	MorphableGroupParallel.prototype.init = function () {
-
+		this._segs = [];
+		if (this._destSegs) {
+			for (var i = 0; i < this._maxLength; i++) {
+				this._segs.push(new MORPH.MorphSegment(this._origSegs[i], this._destSegs[i]));
+			}
+		} else
+			this._segs = this._origSegs;
 	};
 
 	return MorphableGroupParallel;
 })();
-MORPH.MorphableGroupParallel.prototype = MORPH.MorphableGroup.prototype;
-/*
-MORPH.MorphableGroupParallel.prototype.init = function () {
-
-};
-*/
 
 /**
  * Morphable object
@@ -419,7 +413,11 @@ MORPH.createMorphablePath = function (segGroup1, segGroup2) {
 			}
 
 		}
-		morphableGroups.push(new MORPH.MorphableGroup(arr1, arr2));
+		if(arr1.length !== arr2.length){
+			morphableGroups.push(new MORPH.MorphableGroup(arr1, arr2));
+		}else{
+			morphableGroups.push(new MORPH.MorphableGroupParallel(arr1, arr2));
+		}
 	}
 	return new MORPH.MorphablePath(morphableGroups);
 };
@@ -591,8 +589,18 @@ MORPH.GEOM = {
  * @param callback
  * @constructor
  */
-MORPH.LoadPaths = function (paths) {
+MORPH.LoadShapes = function (paths) {
 
+	if(paths.constructor !== Array){
+		paths = [paths];
+	}
+	var promises = paths.map(function(path){
+		return MORPH.LoadShape(path);
+	});
+
+	return Promise.all(promises);
+};
+MORPH.LoadShape = function(paths){
 	return MORPH.LoadSVG(paths)
 		.then(function (data) {
 
@@ -706,7 +714,23 @@ MORPH.SVG = {
 					path += "L " + x + " " + y + " ";
 				}
 			}
+			//remove last space
 			path = path.substr(0, path.length - 2);
+			arr.push(path);
+		}
+
+		var rects = svg.getElementsByTagName('rect');
+		for(var i =0 ; i < rects.length; i ++){
+			var rect = rects[i];
+			var x = parseFloat(rect.getAttribute("x"));
+			var y = parseFloat(rect.getAttribute("y"));
+			var width = parseFloat(rect.getAttribute("width"));
+			var height = parseFloat(rect.getAttribute("height"));
+			var path = "M" + x + " " + y;
+			path  += "L" + (x + width) + " " + y + " ";
+			path += "L" + (x + width) + " " + (y + height) + " ";
+			path += "L" + x + " " + (y + height) + " ";
+			path += "L" + x + " " + y;
 			arr.push(path);
 		}
 

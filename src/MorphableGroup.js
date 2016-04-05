@@ -19,7 +19,7 @@ MORPH.MorphableGroup = (function () {
 	MorphableGroup.prototype = {
 
 		init: function () {
-			if (!this._heteromorphic) {
+			/*if (!this._heteromorphic) {
 				this._segs = [];
 				if (this._destSegs) {
 					for (var i = 0; i < this._maxLength; i++) {
@@ -29,7 +29,7 @@ MORPH.MorphableGroup = (function () {
 					this._segs = this._origSegs;
 
 			} else {
-
+*/
 				if (this._destSegs.length > 1) {
 					this._interSeg = new MORPH.Segment(this._origSegs[0].pt1.Interpolate(this._destSegs[0].pt1, 0.5), null, this._origSegs[this._origSegs.length - 1].pt2.Interpolate(this._destSegs[this._destSegs.length - 1].pt2, 0.5), null);
 				} else {
@@ -37,7 +37,7 @@ MORPH.MorphableGroup = (function () {
 				}
 
 				this._segs = this._startSegs = this.defineStartInterSegs();
-			}
+			//}
 		},
 
 		defineStartInterSegs: function () {
