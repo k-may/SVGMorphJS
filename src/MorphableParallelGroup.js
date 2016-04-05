@@ -21,7 +21,8 @@ MORPH.MorphableGroupParallel = (function () {
 	return MorphableGroupParallel;
 })();
 MORPH.MorphableGroupParallel.prototype = MORPH.MorphableGroup.prototype;
+/*
 MORPH.MorphableGroupParallel.prototype.init = function () {
 
-
 };
+*/
