@@ -70,7 +70,6 @@ MORPH.MorphablePath = function (morphableGroups) {
 		morphableGroups: morphableGroups
 	};
 };
-
 MORPH.createMorphablePath = function (segGroup1, segGroup2) {
 	var morphableGroups = [];
 	var s1 = segGroup1.length;

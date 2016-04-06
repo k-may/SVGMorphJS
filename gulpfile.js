@@ -4,16 +4,20 @@ var concat = require('gulp-concat');
 var notify = require('gulp-notify');
 
 var src = [
-	"src/SVGMorph",
+	"src/SVGMorph.js",
 	"src/Morph.js",
 	"src/Shape.js",
 	"src/Segment.js",
 	"src/MorphSegment.js",
 	"src/MorphableGroup.js",
 	"src/MorphableParallelGroup.js",
-	"src/SVGMorphPath.js",
-	"src/SVGMorphDrawer.js",
-	"src/Utils.js"
+	"src/Path.js",
+	"src/BoundingBox.js",
+	"src/PathUtils.js",
+	"src/GeomUtils.js",
+	"src/LoadUtils.js",
+	"src/CanvasUtils.js",
+	"src/SVGMorphDrawer.js"
 ];
 
 gulp.task('js-min', function () {

@@ -95,8 +95,7 @@ MORPH.MorphableGroup = (function () {
 			}
 
 			setSegmentPos(this._origSegs, x, y);
-
-			if (destSegs) {
+			if (this._destSegs) {
 				setSegmentPos(this._destSegs, x, y);
 			}
 

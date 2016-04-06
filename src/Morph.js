@@ -21,7 +21,7 @@ MORPH.Morph = function (paths, obj) {
 	this._duration = obj["duration"] || 1000;
 	this._delayTime = 0;
 	this._looping = obj["looping"] || false;
-	this._numPaths = _looping ? this._paths.length + 1 : this._paths.length;
+	this._numPaths = this._looping ? this._paths.length + 1 : this._paths.length;
 	this._completeCallback = obj["onComplete"];
 	this._x = 0;
 	this._y = 0;
@@ -39,13 +39,13 @@ MORPH.Morph.prototype = {
 				i++;
 			}
 		} else {
-			this._morphablePathCollection.push(_paths[0]);
+			this._morphablePathCollection.push(this._paths[0]);
 		}
 	},
 	start: function
 		(time) {
 		this._startTime = time !== undefined ? time : window.performance.now();
-		this._startTime += _delayTime;
+		this._startTime += this._delayTime;
 		MORPH.add(this);
 
 		return this;
@@ -135,11 +135,10 @@ MORPH.Morph.prototype = {
 		return this;
 	},
 	setScale: function (scale) {
-		for (var i = 0; i < this._paths.length; i++) {
-			this._paths[i].setScale(scale);
-		}
-		reset();
-
+		this._paths.forEach(function(path){
+			path.setScale(scale);
+		});
+		this.reset();
 		return this;
 	},
 	getWidth: function () {
@@ -152,30 +151,35 @@ MORPH.Morph.prototype = {
 	},
 	getHeight: function () {
 		var h = 0;
-		for (var i = 0; i < _paths.length; i++) {
+		for (var i = 0; i < this._paths.length; i++) {
 			if (this._paths[i].height() > h)
 				h = this._paths[i].height();
 		}
 		return h;
 	},
-	setPos: function (x, y) {
+	translate: function (x, y) {
 		this._x = x;
 		this._y = y;
-		var i = 0;
-		while (i < this._paths.length) {
-			var path = this._paths[i];
+		this._paths.forEach(function(path){
 			path.translate(x, y);
-			i++;
-		}
-
+		});
+		this.reset();
 		return this;
 	},
 	setOrigin: function (x, y) {
-		var dX = x - this._x;
-		var dY = y - this._y;
-		var i = 0;
-		while (i < this._paths.length) {
-			this._paths[i++].translate(dX, dY);
-		}
+		var dX = this._x - x;
+		var dY = this._y - y;
+
+		/*this._morphablePathCollection.forEach(function(collection){
+			collection.morphableGroups.forEach(function(morphableGroup){
+				morphableGroup.translate(dX, dY);
+			});
+		});*/
+		this._paths.forEach(function(path){
+			path.translate(dX, dY);
+		});
+		this.reset();
+
+		return this;
 	}
 };
