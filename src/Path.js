@@ -8,6 +8,8 @@ MORPH.Path = function (obj) {
 	this._segs = [];
 	this._points = [];
 	this._rect;
+	this._x = 0;
+	this._y = 0;
 
 	var _d = obj.d;
 	var bb = new MORPH.BoundingBox();
@@ -242,6 +244,8 @@ MORPH.Path.prototype = {
 		return p;
 	},
 	translate: function (x, y) {
+		this._x = x;
+		this._y = y;
 		for (var i = 0; i < this._segs.length; i++) {
 			var seg = this._segs[i];
 			seg.translate(x, y);
@@ -278,6 +282,10 @@ MORPH.Path.prototype = {
 		}
 		return segments;
 	},
+
+	getPosition : function(){
+		return new MORPH.GEOM.Point(this._x, this._y);
+	}
 
 	/*var getCurrentSegment = function () {
 	 return _currentSegment;

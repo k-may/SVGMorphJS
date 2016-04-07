@@ -147,8 +147,8 @@ MORPH.Morph.prototype = {
 		return h;
 	},
 	translate: function (x, y) {
-		this._x = x;
-		this._y = y;
+		this._x += x;
+		this._y += y;
 		this._paths.forEach(function(path){
 			path.translate(x, y);
 		});
@@ -170,5 +170,12 @@ MORPH.Morph.prototype = {
 		this.reset();
 
 		return this;
+	},
+	getX : function(){
+		return this._x;
+	},
+	getY : function(){
+		return this._y;
 	}
+
 };

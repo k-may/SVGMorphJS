@@ -255,8 +255,8 @@ MORPH.Morph.prototype = {
 		return h;
 	},
 	translate: function (x, y) {
-		this._x = x;
-		this._y = y;
+		this._x += x;
+		this._y += y;
 		this._paths.forEach(function(path){
 			path.translate(x, y);
 		});
@@ -278,7 +278,14 @@ MORPH.Morph.prototype = {
 		this.reset();
 
 		return this;
+	},
+	getX : function(){
+		return this._x;
+	},
+	getY : function(){
+		return this._y;
 	}
+
 };
 
 /**
@@ -562,6 +569,8 @@ MORPH.Path = function (obj) {
 	this._segs = [];
 	this._points = [];
 	this._rect;
+	this._x = 0;
+	this._y = 0;
 
 	var _d = obj.d;
 	var bb = new MORPH.BoundingBox();
@@ -796,6 +805,8 @@ MORPH.Path.prototype = {
 		return p;
 	},
 	translate: function (x, y) {
+		this._x = x;
+		this._y = y;
 		for (var i = 0; i < this._segs.length; i++) {
 			var seg = this._segs[i];
 			seg.translate(x, y);
@@ -832,6 +843,10 @@ MORPH.Path.prototype = {
 		}
 		return segments;
 	},
+
+	getPosition : function(){
+		return new MORPH.GEOM.Point(this._x, this._y);
+	}
 
 	/*var getCurrentSegment = function () {
 	 return _currentSegment;
@@ -1294,14 +1309,15 @@ MORPH.LoadShapes = function (paths) {
 	if(paths.constructor !== Array){
 		paths = [paths];
 	}
-	var promises = paths.map(function(path){
-		return MORPH.LoadShape(path);
-	});
-
+	var promises = [];
+	for(var i = 0; i < paths.length; i ++){
+		promises.push(MORPH.LoadShape(paths[i]));
+	}
 	return Promise.all(promises);
 };
+MORPH.CachedPaths = {};
 MORPH.LoadShape = function(paths){
-	return MORPH.LoadSVG(paths)
+	return MORPH.LoadSVG(paths.concat())
 		.then(function (data) {
 
 			return new Promise(function (resolve,reject) {
@@ -1335,8 +1351,9 @@ MORPH.LoadSVG = function (paths) {
 		var svgPaths = [];
 		var documents = [];
 
-		function loadHandler(data) {
+		function loadHandler(path, data) {
 			documents.push(data);
+				MORPH.CachedPaths[path] = data;
 			if (paths.length) {
 				load(paths.shift());
 			} else {
@@ -1345,14 +1362,19 @@ MORPH.LoadSVG = function (paths) {
 		}
 
 		function load(path) {
-			var xhttp = new XMLHttpRequest();
-			xhttp.onreadystatechange = function () {
-				if (xhttp.readyState == 4 && xhttp.status == 200) {
-					loadHandler(xhttp.responseXML);
-				}
-			};
-			xhttp.open("GET",path,true);
-			xhttp.send();
+
+			if(MORPH.CachedPaths.hasOwnProperty(path)){
+				loadHandler(path, MORPH.CachedPaths[path]);
+			}else {
+				var xhttp = new XMLHttpRequest();
+				xhttp.onreadystatechange = function () {
+					if (xhttp.readyState == 4 && xhttp.status == 200) {
+						loadHandler(path, xhttp.responseXML);
+					}
+				};
+				xhttp.open("GET", path, true);
+				xhttp.send();
+			}
 		}
 
 		load(paths.shift());
