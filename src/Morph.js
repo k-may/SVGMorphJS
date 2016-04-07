@@ -12,7 +12,6 @@
 MORPH.Morph = function (paths, obj) {
 	obj = obj || {};
 
-	//todo protect this variables!
 	this._paths = paths;
 	this._current = 0;
 	this._morphablePathCollection = [];
@@ -52,16 +51,6 @@ MORPH.Morph.prototype = {
 	},
 	update: function (time) {
 		var isComplete, index = 0;
-
-		//todo test this!
-		/*_ratio = Math.max(0, Math.min(1, (time - _startTime) / _duration));
-
-		 if (_numPaths > 1) {
-		 index = Math.floor(_ratio * (_numPaths - 1));
-		 isComplete = index >= _numPaths - 1;
-		 } else {
-		 isComplete = _ratio >= 1;
-		 }*/
 
 		var r = Math.max(0, Math.min(1, (time - this._startTime) / this._duration));
 		isComplete = this.setRatio(r);

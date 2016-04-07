@@ -120,7 +120,6 @@ MORPH.createMorphablePath = function (segGroup1, segGroup2) {
 MORPH.Morph = function (paths, obj) {
 	obj = obj || {};
 
-	//todo protect this variables!
 	this._paths = paths;
 	this._current = 0;
 	this._morphablePathCollection = [];
@@ -160,16 +159,6 @@ MORPH.Morph.prototype = {
 	},
 	update: function (time) {
 		var isComplete, index = 0;
-
-		//todo test this!
-		/*_ratio = Math.max(0, Math.min(1, (time - _startTime) / _duration));
-
-		 if (_numPaths > 1) {
-		 index = Math.floor(_ratio * (_numPaths - 1));
-		 isComplete = index >= _numPaths - 1;
-		 } else {
-		 isComplete = _ratio >= 1;
-		 }*/
 
 		var r = Math.max(0, Math.min(1, (time - this._startTime) / this._duration));
 		isComplete = this.setRatio(r);
@@ -297,17 +286,28 @@ MORPH.Morph.prototype = {
  */
 MORPH.Shape = function (segmentCollection) {
 	this.segmentCollection = segmentCollection || [];
+	this.length = this.segmentCollection.length;
 };
 MORPH.Shape.prototype = {
 	translate: function (x, y) {
-		this.segmentCollection.forEach(function (segment) {
-			segment.translate(x, y);
-		});
+		for(var i = 0 ;i < this.length; i ++){
+			this.segmentCollection[i].translate(x, y);
+		}
 	},
 	scale: function (scale) {
-		this.segmentCollection.forEach(function (segment) {
-			segment.scale(scale);
-		});
+		for(var i = 0 ;i < this.length; i ++){
+			this.segmentCollection[i].scale(scale);
+		}
+	},
+	clone:function(){
+		/*var segmentCollection = this.segmentCollection.map(function(segment){
+			return segment.clone();
+		});*/
+		var segmentCollection = [];
+		for(var i = 0 ;i < this.length; i ++){
+			segmentCollection.push(this.segmentCollection[i].clone());
+		}
+		return new MORPH.Shape(segmentCollection);
 	}
 };
 
@@ -315,11 +315,13 @@ MORPH.Shape.prototype = {
  * Created by kev on 16-04-06.
  */
 
-MORPH.Segment = function (p1, ctrl1, p2, ctrl2) {
-	this.pt1 = p1 !== null ? p1.clone() : new MORPH.GEOM.Point();
-	this.pt2 = p2 !== null ? p2.clone() : new MORPH.GEOM.Point();
-	this.ctrl2 = ctrl2 || this.pt2.clone();
-	this.ctrl1 = ctrl1 || this.pt1.clone();
+MORPH.Segment = function (pt1, ctrl1, pt2, ctrl2) {
+
+	this.pt1 = pt1 !== null ? {x: pt1.x, y : pt1.y} : {x:0, y :0};
+	this.pt2 = pt2 !== null ? {x: pt2.x, y : pt2.y} : {x:0, y :0};
+
+	this.ctrl2 = ctrl2 || {x: pt2.x, y : pt2.y};
+	this.ctrl1 = ctrl1 || {x: pt1.x, y : pt1.y};
 };
 MORPH.Segment.prototype = {
 	interpolate: function () {
@@ -329,32 +331,51 @@ MORPH.Segment.prototype = {
 	},
 	translate: function (x, y) {
 		//trace("translate : " + x + " : " + y);
-		this.pt1.translate(x, y);
-		this.pt2.translate(x, y);
-		this.ctrl1.translate(x, y);
-		this.ctrl2.translate(x, y);
+		this.pt1.x += x;
+		this.pt1.y += y;
+
+		this.pt2.x += x;
+		this.pt2.y += y;
+
+		this.ctrl1.x += x;
+		this.ctrl1.y += y;
+
+		this.ctrl2.x += x;
+		this.ctrl2.y += y;
 	},
 	scale: function (scale, regPt) {
 
-		var regPt = regPt || new MORPH.GEOM.Point(0, 0);
+		//var regPt = regPt || new MORPH.GEOM.Point(0, 0);
 		//TODO : scale by registration point
-
-		var ctrlV1 = new MORPH.GEOM.Vector((this.ctrl1.x - this.pt1.x) * scale, (this.ctrl1.y - this.pt1.y) * scale);
-		var ctrlV2 = new MORPH.GEOM.Point((this.ctrl2.x - this.pt2.x) * scale, (this.ctrl2.y - this.pt2.y) * scale);
+		var ctrlV1 = {
+			x: (this.ctrl1.x - this.pt1.x) * scale,
+			y: (this.ctrl1.y - this.pt1.y) * scale
+		};
+		var ctrlV2 = {
+			x: (this.ctrl2.x - this.pt2.x) * scale,
+			y: (this.ctrl2.y - this.pt2.y) * scale
+		};
 
 		this.pt1.x *= scale;
 		this.pt1.y *= scale;
 		this.pt2.x *= scale;
 		this.pt2.y *= scale;
 
-		this.ctrl1 = new MORPH.GEOM.Point(this.pt1.x + ctrlV1.x, this.pt1.y + ctrlV1.y);
-		this.ctrl2 = new MORPH.GEOM.Point(this.pt2.x + ctrlV2.x, this.pt2.y + ctrlV2.y);
+		this.ctrl1.x = this.pt1.x + ctrlV1.x;
+		this.ctrl1.y = this.pt1.y + ctrlV1.y;
+
+		this.ctrl2.x = this.pt2.x + ctrlV2.x;
+		this.ctrl2.y = this.pt2.y + ctrlV2.y;
 	},
-	isCurve: function () {
+	/*isCurve: function () {
 		return !pt1.equals(ctrl1) && !pt2.equals(ctrl2);
-	},
+	},*/
 	clone: function () {
-		return new MORPH.Segment(this.pt1.clone(), this.ctrl1.clone(), this.pt2.clone(), this.ctrl2.clone());
+		return new MORPH.Segment(
+			{x: this.pt1.x, y: this.pt1.y},
+			{x: this.ctrl1.x, y: this.ctrl1.y},
+			{x: this.pt2.x, y: this.pt2.y},
+			{x: this.ctrl2.x, y: this.ctrl2.y});
 	}
 };
 
@@ -369,13 +390,19 @@ MORPH.MorphSegment = function (origSeg, destSeg) {
 	this.ctrlV2 = new MORPH.GEOM.Vector(this.destSeg.ctrl2.x - this.origSeg.ctrl2.x, this.destSeg.ctrl2.y - this.origSeg.ctrl2.y);
 
 	this.interpolate = function (percentage) {
-		var pt1 = this.origSeg.pt1.Interpolate(this.destSeg.pt1, percentage);
-		var pt2 = this.origSeg.pt2.Interpolate(this.destSeg.pt2, percentage);
+		var pt1 = this.interpolatePt(this.origSeg.pt1, this.destSeg.pt1, percentage);
+		var pt2 = this.interpolatePt(this.origSeg.pt2,this.destSeg.pt2, percentage);
 		var cV = this.ctrlV1.Interpolate(percentage);
-		var ctrl1 = new MORPH.GEOM.Point(cV.x + this.origSeg.ctrl1.x, cV.y + this.origSeg.ctrl1.y);
+		var ctrl1 = { x : cV.x + this.origSeg.ctrl1.x, y : cV.y + this.origSeg.ctrl1.y};
 		cV = this.ctrlV2.Interpolate(percentage);
-		var ctrl2 = new MORPH.GEOM.Point(cV.x + this.origSeg.ctrl2.x, cV.y + this.origSeg.ctrl2.y);
+		var ctrl2 = {x : cV.x + this.origSeg.ctrl2.x, y: cV.y + this.origSeg.ctrl2.y};
 		return new MORPH.Segment(pt1, ctrl1, pt2, ctrl2);
+	};
+
+	this.interpolatePt = function (pt1, pt2,percentage) {
+		var newX = pt1.x + (pt2.x - pt1.x) * percentage;
+		var newY = pt1.y + (pt2.y - pt1.y) * percentage;
+		return {x : newX, y : newY};
 	};
 };
 /**
@@ -1197,9 +1224,7 @@ MORPH.GEOM = {
 		};
 
 		this.clone = function () {
-			var x = this.x;
-			var y = this.y;
-			return new MORPH.GEOM.Point(x,y);
+			return new MORPH.GEOM.Point(this.x,this.y);
 		};
 
 		this.equals = function (pt) {
@@ -1219,7 +1244,12 @@ MORPH.GEOM = {
 			return Math.atan2(p.y - this.y,p.x - this.x);
 		};
 
-		this.Interpolate = function (pt2,percentage) {
+		this.Interpolate = function (pt1, pt2,percentage) {
+			var newX = pt1.x + (pt2.x - pt1.x) * percentage;
+			var newY = pt1.y + (pt2.y - pt1.y) * percentage;
+			return new MORPH.GEOM.Point(newX,newY);
+		};
+		this.interpolate = function (pt2,percentage) {
 			var newX = this.x + (pt2.x - this.x) * percentage;
 			var newY = this.y + (pt2.y - this.y) * percentage;
 			return new MORPH.GEOM.Point(newX,newY);
@@ -1242,6 +1272,9 @@ MORPH.GEOM = {
 
 		this.Interpolate = function (percentage) {
 			return new MORPH.GEOM.Vector(this.x * percentage,this.y * percentage);
+		};
+		this.clone = function () {
+			return new MORPH.GEOM.Vector(this.x,this.y);
 		};
 	}
 };

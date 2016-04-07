@@ -39,9 +39,7 @@ MORPH.GEOM = {
 		};
 
 		this.clone = function () {
-			var x = this.x;
-			var y = this.y;
-			return new MORPH.GEOM.Point(x,y);
+			return new MORPH.GEOM.Point(this.x,this.y);
 		};
 
 		this.equals = function (pt) {
@@ -61,7 +59,12 @@ MORPH.GEOM = {
 			return Math.atan2(p.y - this.y,p.x - this.x);
 		};
 
-		this.Interpolate = function (pt2,percentage) {
+		this.Interpolate = function (pt1, pt2,percentage) {
+			var newX = pt1.x + (pt2.x - pt1.x) * percentage;
+			var newY = pt1.y + (pt2.y - pt1.y) * percentage;
+			return new MORPH.GEOM.Point(newX,newY);
+		};
+		this.interpolate = function (pt2,percentage) {
 			var newX = this.x + (pt2.x - this.x) * percentage;
 			var newY = this.y + (pt2.y - this.y) * percentage;
 			return new MORPH.GEOM.Point(newX,newY);
@@ -84,6 +87,9 @@ MORPH.GEOM = {
 
 		this.Interpolate = function (percentage) {
 			return new MORPH.GEOM.Vector(this.x * percentage,this.y * percentage);
+		};
+		this.clone = function () {
+			return new MORPH.GEOM.Vector(this.x,this.y);
 		};
 	}
 };
