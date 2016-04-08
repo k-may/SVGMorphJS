@@ -16,7 +16,7 @@ MORPH.Path = function (obj) {
 
 	var self = this;
 	var addPoint = function (x, y) {
-		var p = new MORPH.GEOM.Point(x, y);
+		var p = new MORPH.GEOM.Point(Math.floor(x), Math.floor(y));
 		if (!isFirstPoint()) {
 			addLineSegment(getLastPoint(), p);
 		}
@@ -231,7 +231,7 @@ MORPH.Path = function (obj) {
 			case 'Z':
 			case 'z':
 				pp.current = pp.start;
-				this.addPoint(pp.start.x, pp.start.y);
+				addPoint(pp.start.x, pp.start.y);
 		}
 	}
 };

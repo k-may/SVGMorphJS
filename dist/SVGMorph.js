@@ -397,19 +397,13 @@ MORPH.MorphSegment = function (origSeg, destSeg) {
 	this.ctrlV2 = new MORPH.GEOM.Vector(this.destSeg.ctrl2.x - this.origSeg.ctrl2.x, this.destSeg.ctrl2.y - this.origSeg.ctrl2.y);
 
 	this.interpolate = function (percentage) {
-		var pt1 = this.interpolatePt(this.origSeg.pt1, this.destSeg.pt1, percentage);
-		var pt2 = this.interpolatePt(this.origSeg.pt2,this.destSeg.pt2, percentage);
+		var pt1 = MORPH.GEOM.InterpolatePt(this.origSeg.pt1, this.destSeg.pt1, percentage);
+		var pt2 = MORPH.GEOM.InterpolatePt(this.origSeg.pt2,this.destSeg.pt2, percentage);
 		var cV = this.ctrlV1.Interpolate(percentage);
 		var ctrl1 = { x : cV.x + this.origSeg.ctrl1.x, y : cV.y + this.origSeg.ctrl1.y};
 		cV = this.ctrlV2.Interpolate(percentage);
 		var ctrl2 = {x : cV.x + this.origSeg.ctrl2.x, y: cV.y + this.origSeg.ctrl2.y};
 		return new MORPH.Segment(pt1, ctrl1, pt2, ctrl2);
-	};
-
-	this.interpolatePt = function (pt1, pt2,percentage) {
-		var newX = pt1.x + (pt2.x - pt1.x) * percentage;
-		var newY = pt1.y + (pt2.y - pt1.y) * percentage;
-		return {x : newX, y : newY};
 	};
 };
 /**
@@ -434,23 +428,27 @@ MORPH.MorphableGroup = (function () {
 
 		init: function () {
 			/*if (!this._heteromorphic) {
-				this._segs = [];
-				if (this._destSegs) {
-					for (var i = 0; i < this._maxLength; i++) {
-						this._segs.push(new MORPH.MorphSegment(this._origSegs[i], this._destSegs[i]));
-					}
-				} else
-					this._segs = this._origSegs;
+			 this._segs = [];
+			 if (this._destSegs) {
+			 for (var i = 0; i < this._maxLength; i++) {
+			 this._segs.push(new MORPH.MorphSegment(this._origSegs[i], this._destSegs[i]));
+			 }
+			 } else
+			 this._segs = this._origSegs;
 
+			 } else {
+			 */
+			if (this._destSegs.length > 1) {
+				this._interSeg = new MORPH.Segment(
+					MORPH.GEOM.InterpolatePt(this._origSegs[0].pt1, this._destSegs[0].pt1, 0.5),
+					null,
+					MORPH.GEOM.InterpolatePt(this._origSegs[this._origSegs.length - 1].pt2, this._destSegs[this._destSegs.length - 1].pt2, 0.5),
+					null);
 			} else {
-*/
-				if (this._destSegs.length > 1) {
-					this._interSeg = new MORPH.Segment(this._origSegs[0].pt1.Interpolate(this._destSegs[0].pt1, 0.5), null, this._origSegs[this._origSegs.length - 1].pt2.Interpolate(this._destSegs[this._destSegs.length - 1].pt2, 0.5), null);
-				} else {
-					this._interSeg = this._destSegs[0].clone();
-				}
+				this._interSeg = this._destSegs[0].clone();
+			}
 
-				this._segs = this._startSegs = this.defineStartInterSegs();
+			this._segs = this._startSegs = this.defineStartInterSegs();
 			//}
 		},
 
@@ -462,8 +460,8 @@ MORPH.MorphableGroup = (function () {
 			var i = 0;
 			while (i < this._origSegs.length) {
 				percentage = (i + 1) / this._origSegs.length;
-				pt1 = pt2.clone();
-				pt2 = this._interSeg.pt1.Interpolate(this._interSeg.pt2, percentage);
+				pt1 = { x:pt2.x, y : pt2.y};
+				pt2 = MORPH.GEOM.InterpolatePt(this._interSeg.pt1,this._interSeg.pt2, percentage);
 				var seg = new MORPH.Segment(pt1, null, pt2, null);
 				interSegs.push(new MORPH.MorphSegment(this._origSegs[i], seg));
 				i++;
@@ -479,8 +477,8 @@ MORPH.MorphableGroup = (function () {
 			var i = 0;
 			while (i < this._destSegs.length) {
 				percentage = (i + 1) / this._destSegs.length;
-				pt1 = pt2.clone();
-				pt2 = this._interSeg.pt1.Interpolate(this._interSeg.pt2, percentage);
+				pt1 = { x:pt2.x, y : pt2.y};
+				pt2 =  MORPH.GEOM.InterpolatePt(this._interSeg.pt1,this._interSeg.pt2, percentage);
 				var seg = new MORPH.Segment(pt1, null, pt2, null);
 				interSegs.push(new MORPH.MorphSegment(seg, this._destSegs[i]));
 				i++;
@@ -489,11 +487,11 @@ MORPH.MorphableGroup = (function () {
 		},
 		interpolateHetero: function (percentage) {
 			if (percentage >= 0.5) {
-				if (!this._endSegs){
+				if (!this._endSegs) {
 					this._endSegs = this.defineEndInterSegs(this._interSeg.pt1, this._destSegs);
 				}
 				this._segs = this._endSegs;
-			} else{
+			} else {
 				this._segs = this._startSegs;
 			}
 
@@ -577,7 +575,7 @@ MORPH.Path = function (obj) {
 
 	var self = this;
 	var addPoint = function (x, y) {
-		var p = new MORPH.GEOM.Point(x, y);
+		var p = new MORPH.GEOM.Point(Math.floor(x), Math.floor(y));
 		if (!isFirstPoint()) {
 			addLineSegment(getLastPoint(), p);
 		}
@@ -792,7 +790,7 @@ MORPH.Path = function (obj) {
 			case 'Z':
 			case 'z':
 				pp.current = pp.start;
-				this.addPoint(pp.start.x, pp.start.y);
+				addPoint(pp.start.x, pp.start.y);
 		}
 	}
 };
@@ -1202,6 +1200,11 @@ MORPH.PATH = {
  * Created by kev on 16-04-06.
  */
 MORPH.GEOM = {
+	InterpolatePt : function(pt1, pt2, percentage){
+		var newX = pt1.x + (pt2.x - pt1.x) * percentage;
+		var newY = pt1.y + (pt2.y - pt1.y) * percentage;
+		return {x : newX, y : newY};
+	},
 	Rectangle  :function (x,y,width,height) {
 		this.x1 = x;
 		this.y1 = y;

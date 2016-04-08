@@ -2,6 +2,11 @@
  * Created by kev on 16-04-06.
  */
 MORPH.GEOM = {
+	InterpolatePt : function(pt1, pt2, percentage){
+		var newX = pt1.x + (pt2.x - pt1.x) * percentage;
+		var newY = pt1.y + (pt2.y - pt1.y) * percentage;
+		return {x : newX, y : newY};
+	},
 	Rectangle  :function (x,y,width,height) {
 		this.x1 = x;
 		this.y1 = y;
