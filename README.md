@@ -9,7 +9,7 @@ To see the sketches, run 'http-server' from the command line in the project root
 
 ### Sketch 2
 
-![alt text](https://github.com/k-may/SVGMorphJS/blob/master/img/sketch2.PNG?raw=true)
+![alt text](https://github.com/k-may/Migration/blob/master/img/44_dax_screen1.png?raw=true)
 
 
 ### Sketch 3
