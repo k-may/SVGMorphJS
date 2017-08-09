@@ -50,6 +50,8 @@ MORPH.LoadShape = function(paths){
 
 MORPH.LoadSVG = function (paths) {
 
+	paths = paths.constructor === Array ? paths : [paths];
+
 	return new Promise(function (resolve,reject) {
 
 		var svgPaths = [];

@@ -8,7 +8,7 @@ var b;
 function init() {
 
 	b = new Buffer();
-	b.resize(500, 500);
+	b.resize(400, 200);
 
 	window.onresize = function () {
 		b.resize(window.innerWidth, window.innerHeight);
@@ -16,8 +16,8 @@ function init() {
 
 	document.body.appendChild(b.canvas);
 
-	var paths = MORPH.LoadSVG(['path1.svg', 'path2.svg'], function (paths) {
-		morph = new MORPH.Morph(paths, {looping: true, duration: 5000}).start();
+	var paths = MORPH.LoadShape(['path3.svg', 'path4.svg']).then(paths => {
+		morph = new MORPH.Morph(paths, {looping: true, duration: 15000}).start();
 	});
 
 	loop();
@@ -32,6 +32,10 @@ function loop() {
 		var segmentCollection = shapes.segmentCollection;
 
 		b.clear();
+		b.ctx.strokeStyle = "#ff0000";
+		b.ctx.lineWidth = 3;
+		b.ctx.lineCap = "round";
+
 		b.ctx.beginPath();
 
 		for (var i = 0; i < segmentCollection.length; i++) {
