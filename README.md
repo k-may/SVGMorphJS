@@ -1,7 +1,7 @@
 SVGMorphJS
 ==========
 
-SVG morphing, parsing and sequencing library. 
+SVG loading, morphing, parsing and sequencing library. Uses a non-homogeneous morphing algorithm (but it looks real purty)
 
 ## Sketches
 
