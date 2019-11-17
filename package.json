@@ -1,5 +1,5 @@
 {
-  "name": "SVGMorphJS",
+  "name": "svgmorph.js",
   "version": "1.0.0",
   "description": "SVGMorphJS ==========",
   "main": "SVGMorphDrawer.js",
@@ -7,11 +7,10 @@
     "example": "examples"
   },
   "dependencies": {
-    "gulp": "^3.9.1",
-    "gulp-webserver": "^0.9.1",
-    "http-server": "^0.10.0"
   },
   "devDependencies": {
+    "gulp-webserver": "^0.9.1",
+    "http-server": "^0.10.0",
     "gulp": "^3.9.1",
     "gulp-concat": "^2.6.0",
     "gulp-notify": "^2.2.0",

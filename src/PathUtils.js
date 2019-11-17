@@ -15,6 +15,17 @@ MORPH.SVG = {
 		}
 		return null;
 	},
+	/**
+	 * Extracts svg paths from svg document(s)
+	 * @param data
+	 */
+	getPaths:function(data){
+		if(data.length){
+			var svg = data.map(document =>{
+				return document[i].getElementsByTagName('svg')[0]
+			});
+		}
+	},
 	getPathStrings:function (svg) {
 		var i,arr = [];
 

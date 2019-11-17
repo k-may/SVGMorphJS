@@ -104,4 +104,3 @@ MORPH.createMorphablePath = function (segGroup1, segGroup2) {
 	}
 	return new MORPH.MorphablePath(morphableGroups);
 };
-

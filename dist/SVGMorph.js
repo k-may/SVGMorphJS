@@ -1068,6 +1068,29 @@ MORPH.SVG = {
 			arr.push(path);
 		}
 
+		var polys = svg.getElementsByTagName('polygon');
+		for(var i=  0; i < polys.length; i ++){
+			var points = polys[i];
+			points = points.replace(/\s\s+/g, ' ');
+			points = points.split(" ");
+			var pt = points.shift().split(",");
+			var x = parseFloat(pt[0]);
+			var y = parseFloat(pt[1]);
+			var path = "M" + x + " " + y + " ";
+
+			while(points.length){
+				pt = points.shift().split(",");
+				if(pt.length){
+					x = parseFloat(pt[0]);
+					y = parseFloat(pt[1]);
+					path += "L " + x + " " + y + " ";
+				}
+			}
+			//remove last space
+			path = path.substr(0, path.length - 2);
+			arr.push(path);
+		}
+
 		//todo convert all primitives to paths
 		//for other conversions see : https://github.com/JFXtras/jfxtras-labs/blob/2.2/src/main/java/jfxtras/labs/util/ShapeConverter.java
 
