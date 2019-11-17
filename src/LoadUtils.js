@@ -9,7 +9,6 @@
  * @constructor
  */
 MORPH.LoadShapes = function (paths) {
-
 	if(paths.constructor !== Array){
 		paths = [paths];
 	}
@@ -23,7 +22,6 @@ MORPH.CachedPaths = {};
 MORPH.LoadShape = function(paths){
 	return MORPH.LoadSVG(paths.concat())
 		.then(function (data) {
-
 			return new Promise(function (resolve,reject) {
 				var svgPaths = [];
 

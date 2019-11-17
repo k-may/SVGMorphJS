@@ -1,7 +1,6 @@
 var gulp = require('gulp');
-var uglify = require('gulp-uglify');
+var uglify = require('gulp-uglify-es').default;
 var concat = require('gulp-concat');
-var notify = require('gulp-notify');
 
 var src = [
 	"src/SVGMorph.js",
@@ -20,23 +19,34 @@ var src = [
 	"src/SVGMorphDrawer.js"
 ];
 
-gulp.task('js-min', function () {
-	return gulp.src(src)//'src/**/*.js')
-		.pipe(uglify())
-		.pipe(concat('SVGMorph.min.js'))
-		.pipe(gulp.dest('dist'));
-});
+var srcGlob = "./src/**/*";
+// Transpile, concatenate and minify scripts
+function scripts_min() {
+	return (
+		gulp
+			.src(src)
+			.pipe(uglify())
+			.pipe(concat('SVGMorph.min.js'))
+			.pipe(gulp.dest('dist'))
+	);
+}
 
-gulp.task('js', function () {
-	return gulp.src(src)//'src/**/*.js')
-		.pipe(concat('SVGMorph.js'))
-		.pipe(gulp.dest('dist'));
-});
+// Transpile, concatenate and minify scripts
+function scripts() {
+	return (
+		gulp
+			.src(src)
+			.pipe(concat('SVGMorph.js'))
+			.pipe(gulp.dest('dist'))
+	);
+}
+// Watch files
+function watchFiles() {
+	gulp.watch(srcGlob, scripts);
+}
 
-gulp.task('default', function () {
-	gulp.run(['js', 'js-min']);
+const watch = gulp.series(watchFiles);
+const js = gulp.series(scripts, scripts_min);
 
-	gulp.watch('*/*.js', function () {
-		gulp.run(['js', 'js-min']);
-	});
-});
+exports.watch = watch;
+exports.default = js;

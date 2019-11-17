@@ -1,11 +1,13 @@
 SVGMorphJS
 ==========
 
-SVG loading, morphing, parsing and sequencing library. Uses a non-homogeneous morphing algorithm (but it looks real purty)
+SVG loading, morphing, parsing and sequencing library. 
+
+Uses a non-homogeneous morphing algorithm (but it looks real purty)
 
 ## Sketches
 
-To see the sketches, run 'http-server' from the command line in the project root and go through the 'examples/' folders.
+To see the sketches, run ```npm run dev``` and go through the 'examples/sketches[num]' folders.
 
 ### Sketch 2
 

@@ -8,14 +8,14 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "gulp-webserver": "^0.9.1",
-    "http-server": "^0.10.0",
-    "gulp": "^3.9.1",
+    "gulp": "^4.0.2",
     "gulp-concat": "^2.6.0",
-    "gulp-notify": "^2.2.0",
-    "gulp-uglify": "^1.5.3"
+    "gulp-uglify-es": "^2.0.0",
+    "http-server": "^0.10.0",
+    "lite-server": "^2.5.4"
   },
   "scripts": {
+    "dev": "lite-server",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

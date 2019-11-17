@@ -105,7 +105,6 @@ MORPH.createMorphablePath = function (segGroup1, segGroup2) {
 	return new MORPH.MorphablePath(morphableGroups);
 };
 
-
 /**
  * Created by kev on 16-04-06.
  */
@@ -1011,6 +1010,17 @@ MORPH.SVG = {
 		}
 		return null;
 	},
+	/**
+	 * Extracts svg paths from svg document(s)
+	 * @param data
+	 */
+	getPaths:function(data){
+		if(data.length){
+			var svg = data.map(document =>{
+				return document[i].getElementsByTagName('svg')[0]
+			});
+		}
+	},
 	getPathStrings:function (svg) {
 		var i,arr = [];
 
@@ -1053,6 +1063,29 @@ MORPH.SVG = {
 			arr.push(path);
 		}
 
+		var polygons = svg.getElementsByTagName('polygon');
+		for(i = 0 ;i < polygons.length; i ++){
+
+			var points = polygons[i].getAttribute("points");
+			points = points.replace(/\s\s+/g, ' ');
+			points = points.split(" ");
+
+			var x = parseFloat(points.shift());
+			var y = parseFloat(points.shift());
+			var path = "M" + x + " " + y + " ";
+
+			while(points.length){
+				//pt = points.shift().split(",");
+				//if(pt.length){
+					x = parseFloat(points.shift());
+					y = parseFloat(points.shift());
+					path += "L " + x + " " + y + " ";
+				//}
+			}
+			//remove last space
+			path = path.substr(0, path.length - 2);
+			arr.push(path);
+		}
 		var rects = svg.getElementsByTagName('rect');
 		for(var i =0 ; i < rects.length; i ++){
 			var rect = rects[i];
@@ -1065,29 +1098,6 @@ MORPH.SVG = {
 			path += "L" + (x + width) + " " + (y + height) + " ";
 			path += "L" + x + " " + (y + height) + " ";
 			path += "L" + x + " " + y;
-			arr.push(path);
-		}
-
-		var polys = svg.getElementsByTagName('polygon');
-		for(var i=  0; i < polys.length; i ++){
-			var points = polys[i];
-			points = points.replace(/\s\s+/g, ' ');
-			points = points.split(" ");
-			var pt = points.shift().split(",");
-			var x = parseFloat(pt[0]);
-			var y = parseFloat(pt[1]);
-			var path = "M" + x + " " + y + " ";
-
-			while(points.length){
-				pt = points.shift().split(",");
-				if(pt.length){
-					x = parseFloat(pt[0]);
-					y = parseFloat(pt[1]);
-					path += "L " + x + " " + y + " ";
-				}
-			}
-			//remove last space
-			path = path.substr(0, path.length - 2);
 			arr.push(path);
 		}
 
@@ -1332,7 +1342,6 @@ MORPH.GEOM = {
  * @constructor
  */
 MORPH.LoadShapes = function (paths) {
-
 	if(paths.constructor !== Array){
 		paths = [paths];
 	}
@@ -1346,7 +1355,6 @@ MORPH.CachedPaths = {};
 MORPH.LoadShape = function(paths){
 	return MORPH.LoadSVG(paths.concat())
 		.then(function (data) {
-
 			return new Promise(function (resolve,reject) {
 				var svgPaths = [];
 
