@@ -1062,18 +1062,14 @@ MORPH.SVG = {
             points = points.replace(/\s\s+/g, ' ');
             points = points.split(' ');
 
-            var pt = points.shift().split(',');
-            var x = parseFloat(pt[0]);
-            var y = parseFloat(pt[1]);
+            var x = parseFloat(points.shift());
+            var y = parseFloat(points.shift());
             var path = 'M' + x + ' ' + y + ' ';
 
             while (points.length) {
-                pt = points.shift().split(',');
-                if (pt.length) {
-                    x = parseFloat(pt[0]);
-                    y = parseFloat(pt[1]);
-                    path += 'L ' + x + ' ' + y + ' ';
-                }
+                x = parseFloat(points.shift());
+                y = parseFloat(points.shift());
+                path += 'L ' + x + ' ' + y + ' ';
             }
             //remove last space
             path = path.substr(0, path.length - 2);
