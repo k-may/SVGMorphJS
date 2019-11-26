@@ -1,6 +1,6 @@
 {
   "name": "svgmorph.js",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "SVGMorphJS ==========",
   "main": "SVGMorphDrawer.js",
   "directories": {
