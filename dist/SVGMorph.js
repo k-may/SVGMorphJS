@@ -781,8 +781,8 @@ MORPH.Path = function (obj) {
 					pp.addMarkerAngle(halfWay, (a1 + (a1 + ad)) / 2 + (sweepFlag == 0 ? -1 : 1) * Math.PI / 2);
 					pp.addMarkerAngle(cp, (a1 + ad) + (sweepFlag == 0 ? -1 : 1) * Math.PI / 2);
 
-					this.addPoint(halfWay.x, halfWay.y)
-					this.addPoint(cp.x, cp.y);
+					addPoint(halfWay.x, halfWay.y);
+					addPoint(cp.x, cp.y);
 
 					bb.addPoint(cp.x, cp.y);
 				}
