@@ -21,9 +21,9 @@ MORPH.GEOM = {
 			return this.h;
 		};
 
-		this.scale = function (scale) {
-			this.w = this.w * scale;
-			this.h = this.h * scale;
+		this.scale = function (scaleX, scaleY) {
+			this.w = this.w * scaleX;
+			this.h = this.h * scaleY;
 		};
 
 		this.translate = function (x,y) {

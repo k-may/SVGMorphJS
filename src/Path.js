@@ -11,12 +11,12 @@ MORPH.Path = function (obj) {
 	this._x = 0;
 	this._y = 0;
 
-	var _d = obj.d;
+	var _d = this._d = obj.d;
 	var bb = new MORPH.BoundingBox();
 
 	var self = this;
 	var addPoint = function (x, y) {
-		var p = new MORPH.GEOM.Point(Math.floor(x), Math.floor(y));
+		var p = new MORPH.GEOM.Point(x, y);
 		if (!isFirstPoint()) {
 			addLineSegment(getLastPoint(), p);
 		}
@@ -174,6 +174,9 @@ MORPH.Path = function (obj) {
 
 					// Conversion from endpoint to center parameterization
 					// http://www.w3.org/TR/SVG11/implnote.html#ArcImplementationNotes
+
+					//or try https://github.com/paperjs/paper.js/blob/develop/src/path/Path.js#L2447
+
 					// x1', y1'
 					var currp = new MORPH.GEOM.Point(Math.cos(xAxisRotation) * (curr.x - cp.x) / 2.0 + Math.sin(xAxisRotation) * (curr.y - cp.y) / 2.0, -Math.sin(xAxisRotation) * (curr.x - cp.x) / 2.0 + Math.cos(xAxisRotation) * (curr.y - cp.y) / 2.0);
 					// adjust radii
@@ -238,7 +241,7 @@ MORPH.Path = function (obj) {
 
 MORPH.Path.prototype = {
 	clone: function () {
-		var p = new MORPH.Path({d: _d});
+		var p = new MORPH.Path({d: this._d});
 		p.setRectangle(this._rect.clone());
 		p.name = this.name;
 		return p;
@@ -252,12 +255,13 @@ MORPH.Path.prototype = {
 		}
 		this._rect.translate(x, y);
 	},
-	setScale: function (scale) {
+	setScale: function (scaleX, scaleY) {
+		scaleY = scaleY || scaleX;
 		for (var i = 0; i < this._segs.length; i++) {
 			var seg = this._segs[i];
-			seg.scale(scale, new MORPH.GEOM.Point(0, 0));
+			seg.scale(scaleX, scaleY, new MORPH.GEOM.Point(0, 0));
 		}
-		this._rect.scale(scale);
+		this._rect.scale(scaleX, scaleY);
 	},
 	setRectangle: function (rect) {
 		this._rect = rect;

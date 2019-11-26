@@ -350,23 +350,23 @@ MORPH.Segment.prototype = {
 		this.ctrl2.x += x;
 		this.ctrl2.y += y;
 	},
-	scale: function (scale, regPt) {
+	scale: function (scaleX, scaleY, regPt) {
 
 		//var regPt = regPt || new MORPH.GEOM.Point(0, 0);
 		//TODO : scale by registration point
 		var ctrlV1 = {
-			x: (this.ctrl1.x - this.pt1.x) * scale,
-			y: (this.ctrl1.y - this.pt1.y) * scale
+			x: (this.ctrl1.x - this.pt1.x) * scaleX,
+			y: (this.ctrl1.y - this.pt1.y) * scaleY
 		};
 		var ctrlV2 = {
-			x: (this.ctrl2.x - this.pt2.x) * scale,
-			y: (this.ctrl2.y - this.pt2.y) * scale
+			x: (this.ctrl2.x - this.pt2.x) * scaleX,
+			y: (this.ctrl2.y - this.pt2.y) * scaleY
 		};
 
-		this.pt1.x *= scale;
-		this.pt1.y *= scale;
-		this.pt2.x *= scale;
-		this.pt2.y *= scale;
+		this.pt1.x *= scaleX;
+		this.pt1.y *= scaleY;
+		this.pt2.x *= scaleX;
+		this.pt2.y *= scaleY;
 
 		this.ctrl1.x = this.pt1.x + ctrlV1.x;
 		this.ctrl1.y = this.pt1.y + ctrlV1.y;
@@ -570,12 +570,12 @@ MORPH.Path = function (obj) {
 	this._x = 0;
 	this._y = 0;
 
-	var _d = obj.d;
+	var _d = this._d = obj.d;
 	var bb = new MORPH.BoundingBox();
 
 	var self = this;
 	var addPoint = function (x, y) {
-		var p = new MORPH.GEOM.Point(Math.floor(x), Math.floor(y));
+		var p = new MORPH.GEOM.Point(x, y);
 		if (!isFirstPoint()) {
 			addLineSegment(getLastPoint(), p);
 		}
@@ -733,6 +733,9 @@ MORPH.Path = function (obj) {
 
 					// Conversion from endpoint to center parameterization
 					// http://www.w3.org/TR/SVG11/implnote.html#ArcImplementationNotes
+
+					//or try https://github.com/paperjs/paper.js/blob/develop/src/path/Path.js#L2447
+
 					// x1', y1'
 					var currp = new MORPH.GEOM.Point(Math.cos(xAxisRotation) * (curr.x - cp.x) / 2.0 + Math.sin(xAxisRotation) * (curr.y - cp.y) / 2.0, -Math.sin(xAxisRotation) * (curr.x - cp.x) / 2.0 + Math.cos(xAxisRotation) * (curr.y - cp.y) / 2.0);
 					// adjust radii
@@ -797,7 +800,7 @@ MORPH.Path = function (obj) {
 
 MORPH.Path.prototype = {
 	clone: function () {
-		var p = new MORPH.Path({d: _d});
+		var p = new MORPH.Path({d: this._d});
 		p.setRectangle(this._rect.clone());
 		p.name = this.name;
 		return p;
@@ -811,12 +814,13 @@ MORPH.Path.prototype = {
 		}
 		this._rect.translate(x, y);
 	},
-	setScale: function (scale) {
+	setScale: function (scaleX, scaleY) {
+		scaleY = scaleY || scaleX;
 		for (var i = 0; i < this._segs.length; i++) {
 			var seg = this._segs[i];
-			seg.scale(scale, new MORPH.GEOM.Point(0, 0));
+			seg.scale(scaleX, scaleY, new MORPH.GEOM.Point(0, 0));
 		}
-		this._rect.scale(scale);
+		this._rect.scale(scaleX, scaleY);
 	},
 	setRectangle: function (rect) {
 		this._rect = rect;
@@ -1272,9 +1276,9 @@ MORPH.GEOM = {
 			return this.h;
 		};
 
-		this.scale = function (scale) {
-			this.w = this.w * scale;
-			this.h = this.h * scale;
+		this.scale = function (scaleX, scaleY) {
+			this.w = this.w * scaleX;
+			this.h = this.h * scaleY;
 		};
 
 		this.translate = function (x,y) {

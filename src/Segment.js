@@ -30,23 +30,23 @@ MORPH.Segment.prototype = {
 		this.ctrl2.x += x;
 		this.ctrl2.y += y;
 	},
-	scale: function (scale, regPt) {
+	scale: function (scaleX, scaleY, regPt) {
 
 		//var regPt = regPt || new MORPH.GEOM.Point(0, 0);
 		//TODO : scale by registration point
 		var ctrlV1 = {
-			x: (this.ctrl1.x - this.pt1.x) * scale,
-			y: (this.ctrl1.y - this.pt1.y) * scale
+			x: (this.ctrl1.x - this.pt1.x) * scaleX,
+			y: (this.ctrl1.y - this.pt1.y) * scaleY
 		};
 		var ctrlV2 = {
-			x: (this.ctrl2.x - this.pt2.x) * scale,
-			y: (this.ctrl2.y - this.pt2.y) * scale
+			x: (this.ctrl2.x - this.pt2.x) * scaleX,
+			y: (this.ctrl2.y - this.pt2.y) * scaleY
 		};
 
-		this.pt1.x *= scale;
-		this.pt1.y *= scale;
-		this.pt2.x *= scale;
-		this.pt2.y *= scale;
+		this.pt1.x *= scaleX;
+		this.pt1.y *= scaleY;
+		this.pt2.x *= scaleX;
+		this.pt2.y *= scaleY;
 
 		this.ctrl1.x = this.pt1.x + ctrlV1.x;
 		this.ctrl1.y = this.pt1.y + ctrlV1.y;
