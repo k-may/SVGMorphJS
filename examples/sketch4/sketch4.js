@@ -1,6 +1,24 @@
-/**
- * Created by kev on 15-10-07.
- */
+import {SVGMORPH} from '../svgmorph.js';
+
+const targetFrameRate = 60;
+var lastFrameTime = 0;
+function loop() {
+
+    var time = window.performance.now();
+    const time_since_last = time - lastFrameTime;
+    const target_time_between_frames = 1000 / targetFrameRate;
+
+    const epsilon = 5;
+    if (
+        time_since_last >= target_time_between_frames - epsilon
+    ) {
+        const deltaTime = time - lastFrameTime;
+        draw({time,deltaTime});
+        lastFrameTime = time;
+    }
+
+    window.requestAnimationFrame(loop);
+}
 
 var morph;
 var b, p1, p2, current;
@@ -8,13 +26,17 @@ var duration = 1000;
 
 function init() {
 
-	b = new MORPH.CanvasUtils.CreateBuffer();
+    const {
+        CanvasUtils
+    } = SVGMORPH;
+
+    b = new SVGMORPH.CanvasUtils.CreateBuffer();
 	b.resize(500, 500);
 
-    p1 = new MORPH.CanvasUtils.CreateBuffer();
+    p1 = new SVGMORPH.CanvasUtils.CreateBuffer();
     p1.resize(500, 500);
 
-    p2 = new MORPH.CanvasUtils.CreateBuffer();
+    p2 = new SVGMORPH.CanvasUtils.CreateBuffer();
     p2.resize(500, 500);
 
 	window.onresize = function () {
@@ -23,15 +45,15 @@ function init() {
 
 	document.body.appendChild(b.canvas);
 
-	var paths = MORPH.LoadShape(['drop.svg','circle.svg','square.svg'])
+	var paths = SVGMORPH.LoadShape(['drop.svg','circle.svg','square.svg'])
 	.then(paths => {
-		morph = new MORPH.Morph(paths, {looping:true, duration:duration}).start();
+		morph = new SVGMORPH.Morph(paths, {looping:true, duration:duration}).start();
 	});
 
 	loop();
 }
 
-function loop() {
+function draw({time,deltaTime}) {
 
     //draw persistent
     var next;
@@ -80,12 +102,10 @@ function loop() {
         current.ctx.stroke();
     }
 
-    this.b.clear();
-    this.b.ctx.drawImage(current.canvas, 0, 0);
+    b.clear();
+    b.ctx.drawImage(current.canvas, 0, 0);
 
-	MORPH.update();
-
-	window.requestAnimationFrame(loop);
+	SVGMORPH.update({time,deltaTime});
 }
 
 

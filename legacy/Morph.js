@@ -1,55 +1,55 @@
-import {SVGMORPH} from './Index.js';
-import Shape from './Shape.js';
+/**
+ * Created by kev on 16-04-06.
+ */
+/**
+ * Morphable object
+ *
+ * @param paths : Path[]
+ * @param obj
+ * @returns {MORPH.Morph}
+ * @constructor
+ */
+MORPH.Morph = function (paths, obj) {
+    obj = obj || {};
 
-export class Morph{
+    this._paths = paths;
+    this._current = 0;
+    this._morphablePathCollection = [];
+    this._ratio = 0;
+    this._startTime;
+    this._duration = obj["duration"] || 1000;
+    this._delayTime = 0;
+    this._looping = obj["looping"] || false;
+    this._numPaths = this._looping ? this._paths.length + 1 : this._paths.length;
+    this._completeCallback = obj["onComplete"];
+    this._x = 0;
+    this._y = 0;
 
-    /**
-     *
-     * @param paths :
-     * @param obj
-     */
-    constructor(paths, obj) {
-        obj = obj || {};
-
-        this._paths = paths;
-        this._current = 0;
-        this._morphablePathCollection = [];
-        this._ratio = 0;
-        this._startTime;
-        this._duration = obj["duration"] || 1000;
-        this._delayTime = 0;
-        this._looping = obj["looping"] || false;
-        this._numPaths = this._looping ? this._paths.length + 1 : this._paths.length;
-        this._completeCallback = obj["onComplete"];
-        this._x = 0;
-        this._y = 0;
-
-        this.reset();
-    }
-
-    reset () {
+    this.reset();
+};
+MORPH.Morph.prototype = {
+    reset: function () {
         var i = 0;
         if (this._numPaths > 1) {
             this._morphablePathCollection = [];
             while (this._morphablePathCollection.length < this._numPaths - 1) {
-                var Morphables = SVGMORPH.createMorphablePath(this._paths[i].getSegments(), this._paths[(i + 1) % this._paths.length].getSegments());
+                var Morphables = MORPH.createMorphablePath(this._paths[i].getSegments(), this._paths[(i + 1) % this._paths.length].getSegments());
                 this._morphablePathCollection.push(Morphables);
                 i++;
             }
         } else {
             this._morphablePathCollection.push(this._paths[0]);
         }
-    }
-
-    start(time) {
+    },
+    start: function
+        (time) {
         this._startTime = time !== undefined ? time : window.performance.now();
         this._startTime += this._delayTime;
-        SVGMORPH.add(this);
+        MORPH.add(this);
 
         return this;
-    }
-
-    update(time) {
+    },
+    update: function (time) {
         var isComplete, index = 0;
 
         var r = Math.max(0, Math.min(1, (time - this._startTime) / this._duration));
@@ -72,46 +72,40 @@ export class Morph{
         }
 
         return true;
-    }
-
-    getCurrentPath() {
+    },
+    getCurrentPath: function () {
         return this._paths[this._paths.length - 1];
-    }
-
-    setRatio(ratio) {
+    },
+    setRatio: function (ratio) {
         this._ratio = ratio;
         if (this._numPaths > 1) {
-            var index = Math.floor(this._ratio * (this._numPaths - 1));
+            index = Math.floor(this._ratio * (this._numPaths - 1));
             return index >= this._numPaths - 1;
         } else {
             return this._ratio >= 1;
         }
 
-    }
-
-    getCurrentRatio() {
+    },
+    getCurrentRatio: function () {
         var cR = (this._ratio * (this._numPaths - 1)) - this._current;
         return cR;
-    }
-
-    getCurrentMorphablePath() {
+    },
+    getCurrentMorphablePath: function () {
         if (this._current < this._morphablePathCollection.length)
             return this._morphablePathCollection[this._current];
         else {
             console.log("Error : something wrong here!");
         }
-    }
-
-    getShape() {
+    },
+    getShape: function () {
         if (this._numPaths > 1)
             return this.currentShape();
         else {
             var path = this._paths[0];
-            return new Shape(path.getSegments());
+            return new MORPH.Shape(path.getSegments());
         }
-    }
-
-    currentShape() {
+    },
+    currentShape: function () {
         var currentMorphablePathGroups = this.getCurrentMorphablePath().morphableGroups;
 
         var ratio = this.getCurrentRatio();
@@ -124,41 +118,36 @@ export class Morph{
             segs = segs.concat(morphedSegs);
         }
 
-        return new Shape(segs);
-    }
-
-    onComplete(callback) {
+        return new MORPH.Shape(segs);
+    },
+    onComplete: function (callback) {
         this._onCompleteCallback = callback;
         return this;
-    }
-
-    setScale(scale) {
+    },
+    setScale: function (scale) {
         this._paths.forEach(function (path) {
             path.setScale(scale);
         });
         this.reset();
         return this;
-    }
-
-    getWidth() {
+    },
+    getWidth: function () {
         var w = 0;
         for (var i = 0; i < this._paths.length; i++) {
             if (this._paths[i].width() > w)
                 w = this._paths[i].width();
         }
         return w;
-    }
-
-    getHeight() {
+    },
+    getHeight: function () {
         var h = 0;
         for (var i = 0; i < this._paths.length; i++) {
             if (this._paths[i].height() > h)
                 h = this._paths[i].height();
         }
         return h;
-    }
-
-    translate(x, y) {
+    },
+    translate: function (x, y) {
         this._x += x;
         this._y += y;
         this._paths.forEach(function (path) {
@@ -166,9 +155,8 @@ export class Morph{
         });
         this.reset();
         return this;
-    }
-
-    setOrigin(x, y) {
+    },
+    setOrigin: function (x, y) {
         var dX = this._x - x;
         var dY = this._y - y;
 
@@ -183,13 +171,12 @@ export class Morph{
         this.reset();
 
         return this;
-    }
-
-    getX() {
+    },
+    getX: function () {
         return this._x;
-    }
-
-    getY() {
+    },
+    getY: function () {
         return this._y;
     }
-}
+
+};

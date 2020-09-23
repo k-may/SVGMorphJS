@@ -1,9 +1,4 @@
-/**
- * Created by kev on 15-10-07.
- */
-/**
- * Created by kev on 15-10-06.
- */
+import {SVGMORPH} from '../svgmorph.js';
 
 var morph;
 var b, p1, p2, current;
@@ -12,24 +7,48 @@ var time = 0;
 
 function init() {
 
-	b = new Buffer();
+	const {
+		CanvasUtils
+	} = SVGMORPH;
+
+	b = CanvasUtils.CreateBuffer();
 	b.resize(500, 500);
 	document.body.appendChild(b.canvas);
 
-	p1 = new Buffer();
+	p1 = CanvasUtils.CreateBuffer();
 	p1.resize(500, 500);
 
-	p2 = new Buffer();
+	p2 = CanvasUtils.CreateBuffer();
 	p2.resize(500, 500);
 
-	var paths = MORPH.LoadShape(['path3.svg', 'path4.svg', 'path5.svg', 'path6.svg', 'path7.svg', 'path8.svg']).then(paths => {
-		morph = new MORPH.Morph(paths, {looping:true, duration:duration}).start();
+	var paths = SVGMORPH.LoadShape(['path3.svg', 'path4.svg', 'path5.svg', 'path6.svg', 'path7.svg', 'path8.svg']).then(paths => {
+		morph = new SVGMORPH.Morph(paths, {looping:true, duration:duration}).start();
 	});
 
 	loop();
 }
 
+const targetFrameRate = 60;
+var lastFrameTime = 0;
 function loop() {
+
+	var time = window.performance.now();
+	const time_since_last = time - lastFrameTime;
+	const target_time_between_frames = 1000 / targetFrameRate;
+
+	const epsilon = 5;
+	if (
+		time_since_last >= target_time_between_frames - epsilon
+	) {
+		const deltaTime = time - lastFrameTime;
+		draw({time,deltaTime});
+		lastFrameTime = time;
+	}
+
+	window.requestAnimationFrame(loop);
+}
+
+function draw({time,deltaTime}) {
 
 	var time = Date.now()*0.001;//(Date.now()%duration)/duration;
 
@@ -80,27 +99,11 @@ function loop() {
 		current.ctx.stroke();
 	}
 
+	b.clear();
+	b.ctx.drawImage(current.canvas, 0, 0);
 
-	this.b.clear();
-	this.b.ctx.drawImage(current.canvas, 0, 0);
+	SVGMORPH.update({time,deltaTime});
 
-	MORPH.update();
-
-	window.requestAnimationFrame(loop);
-}
-
-function Buffer() {
-	this.canvas = document.createElement("canvas");
-	this.ctx = this.canvas.getContext("2d");
-	this.clear = function () {
-		this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-	}
-	this.resize = function (width, height) {
-		if (this.canvas.width !== width || this.canvas.height !== height) {
-			this.canvas.width = width;
-			this.canvas.height = height;
-		}
-	}
 }
 
 init();

@@ -1,13 +1,35 @@
-/**
- * Created by kev on 15-10-06.
- */
+import {SVGMORPH} from '../svgmorph.js';
+
+const targetFrameRate = 60;
+var lastFrameTime = 0;
+function loop() {
+
+	var time = window.performance.now();
+	const time_since_last = time - lastFrameTime;
+	const target_time_between_frames = 1000 / targetFrameRate;
+
+	const epsilon = 5;
+	if (
+		time_since_last >= target_time_between_frames - epsilon
+	) {
+		const deltaTime = time - lastFrameTime;
+		draw({time,deltaTime});
+		lastFrameTime = time;
+	}
+
+	window.requestAnimationFrame(loop);
+}
 
 var morph;
 var b;
 
 function init() {
 
-	b = new Buffer();
+	const {
+		CanvasUtils
+	} = SVGMORPH;
+
+	b = CanvasUtils.CreateBuffer();
 	b.resize(400, 200);
 
 	window.onresize = function () {
@@ -16,14 +38,15 @@ function init() {
 
 	document.body.appendChild(b.canvas);
 
-	var paths = MORPH.LoadShape(['path3.svg', 'path4.svg']).then(paths => {
-		morph = new MORPH.Morph(paths, {looping: true, duration: 15000}).start();
+	var paths = SVGMORPH.LoadShape(['path3.svg', 'path4.svg']).then(paths => {
+		morph = new SVGMORPH.Morph(paths, {looping: true, duration: 15000}).start();
 	});
 
 	loop();
 }
 
-function loop() {
+
+function draw({time,deltaTime}) {
 
 	if (morph) {
 
@@ -54,23 +77,7 @@ function loop() {
 		b.ctx.stroke();
 	}
 
-	MORPH.update();
-
-	window.requestAnimationFrame(loop);
-}
-
-function Buffer() {
-	this.canvas = document.createElement("canvas");
-	this.ctx = this.canvas.getContext("2d");
-	this.clear = function () {
-		this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-	}
-	this.resize = function (width, height) {
-		if (this.canvas.width !== width || this.canvas.height !== height) {
-			this.canvas.width = width;
-			this.canvas.height = height;
-		}
-	}
+	SVGMORPH.update({time,deltaTime});
 }
 
 init();
